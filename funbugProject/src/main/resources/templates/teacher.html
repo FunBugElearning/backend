@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Teacher Dashboard</title>
+</head>
+<body>
+    <h2>Welcome Teacher</h2>
+    <p>Chức năng:</p>
+<ul>
+    <li><a th:href="@{/teacher/classes}">Quản lý lớp học</a></li>
+    <li><a th:href="@{/teacher/students}">Xem / thêm / sửa / xóa học sinh</a></li>
+    <li><a th:href="@{/teacher/scores}">Cho điểm</a></li>
+    <li><a th:href="@{/teacher/attendance}">Điểm danh</a></li>
+</ul>
+</body>
+</html>
