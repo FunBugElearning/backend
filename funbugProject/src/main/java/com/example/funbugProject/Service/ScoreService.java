@@ -2,38 +2,49 @@ package com.example.funbugProject.Service;
 
 import com.example.funbugProject.Entity.Score;
 import com.example.funbugProject.Repository.ScoreRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ScoreService {
 
-    @Autowired
-    private ScoreRepository scoreRepository;
+    private final ScoreRepository scoreRepository;
 
-    public List<Score> getAll() {
+    public ScoreService(ScoreRepository scoreRepository) {
+        this.scoreRepository = scoreRepository;
+    }
+
+    public List<Score> getAllScores() {
         return scoreRepository.findAll();
+    }
+
+    public Optional<Score> getScoreById(int id) {
+        return scoreRepository.findById(id);
     }
 
     public Score createScore(Score score) {
         return scoreRepository.save(score);
     }
 
-    public Score updateScore(int id, Score score) {
-        score.setId(id);
-        return scoreRepository.save(score);
+    public Score updateScore(int id, Score updatedScore) {
+        return scoreRepository.findById(id)
+                .map(existing -> {
+                    existing.setSubject(updatedScore.getSubject());
+                    existing.setAttendanceScore(updatedScore.getAttendanceScore());
+                    existing.setHomeworkScore(updatedScore.getHomeworkScore());
+                    existing.setExamScore(updatedScore.getExamScore());
+                    return scoreRepository.save(existing);
+                })
+                .orElse(null);
     }
 
-    public void deleteScore(int id) {
-        scoreRepository.deleteById(id);
-    }
-
-    // Lấy điểm của học sinh
-    public List<Score> getByStudentId(int studentId) {
-        return scoreRepository.findAll().stream()
-                .filter(s -> s.getStudent() != null && s.getStudent().getId() == studentId)
-                .toList();
+    public boolean deleteScore(int id) {
+        if (scoreRepository.existsById(id)) {
+            scoreRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }
