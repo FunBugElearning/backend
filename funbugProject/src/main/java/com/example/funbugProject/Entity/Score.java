@@ -3,27 +3,38 @@ package com.example.funbugProject.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@NoArgsConstructor
-@Data
-@AllArgsConstructor
 @Entity
 @Table(name = "scores")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Score {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "student_id")
-    private User student;
-
-    @ManyToOne
-    @JoinColumn(name = "classroom_id")
+    @JoinColumn(name = "classroom_id", nullable = false)
     private Classroom classroom;
 
-    private double value; // Điểm số
+    @ManyToOne
+    @JoinColumn(name = "student_id", nullable = false)
+    private User student;
 
-    private String description; // Chỉ số thi đua
+    @Column(nullable = false)
+    private String subject;
+
+    @Column(nullable = false)
+    private double attendanceScore;
+
+    @Column(nullable = false)
+    private double homeworkScore;
+
+    @Column(nullable = false)
+    private double examScore;
+
+    public double getFinalScore() {
+        return attendanceScore * 0.2 + homeworkScore * 0.3 + examScore * 0.5;
+    }
 }
