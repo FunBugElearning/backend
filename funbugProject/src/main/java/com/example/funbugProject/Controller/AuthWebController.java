@@ -1,7 +1,7 @@
 package com.example.funbugProject.Controller;
 
 import com.example.funbugProject.Entity.User;
-import com.example.funbugProject.Service.UserService;
+import com.example.funbugProject.Service.UserServiceImpl;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthWebController {
 
-    private final UserService userService;
+    private final UserServiceImpl userService;
 
     @GetMapping("/login")
     public String loginPage() {

@@ -32,5 +32,6 @@ public class JwtUtil {
         String email = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody().getSubject();
 
         return email;
+
     }
 }
