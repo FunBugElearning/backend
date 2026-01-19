@@ -1,5 +1,6 @@
 package com.example.funbugProject.Controller;
 
+import com.example.funbugProject.DTO.ClassroomCreateRequest;
 import com.example.funbugProject.Entity.Classroom;
 import com.example.funbugProject.Service.ClassroomService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/classrooms")
+@RequestMapping("/api/v1/classrooms")
 public class ClassroomController {
 
     @Autowired
@@ -20,8 +21,8 @@ public class ClassroomController {
     }
 
     @PostMapping
-    public Classroom createClassroom(@RequestBody Classroom classroom) {
-        return classroomService.createClassroom(classroom);
+    public Classroom createClassroom(@RequestBody ClassroomCreateRequest body) {
+        return classroomService.createClassroom(body);
     }
 
     @PutMapping("/{id}")

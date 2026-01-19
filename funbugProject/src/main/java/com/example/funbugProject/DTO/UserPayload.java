@@ -1,6 +1,5 @@
 package com.example.funbugProject.DTO;
 
-import com.example.funbugProject.Entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,13 +9,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-
-
-public class UserDto {
-    private int id;
-    private String name;
+public class UserPayload {
     private String email;
-    private String password;
-    private Role role;
-
+    private String username;
+    private int id;
 }

@@ -1,0 +1,25 @@
+GET http://localhost:8080/api/classrooms
+Content-Type: application/json
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.1
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+Cookie: JSESSIONID=422E5DC2C41B9E05B18DCC5393C7F041
+content-length: 62
+
+{
+  "id": 0,
+  "name": "",
+  "teacher": {},
+  "students": []
+}
+
+###
+
+POST http://localhost:8080/api/users
+User-Agent: IntelliJ HTTP Client/IntelliJ IDEA 2025.1
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+content-length: 0
+
+###
+

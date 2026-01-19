@@ -1,27 +1,42 @@
 package com.example.funbugProject.Security;
 
+import com.example.funbugProject.DTO.UserPayload;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private static final String SECRET_KEY = "mySuperSecretKeyForVuTrungKien24102005123456789";
+    @Value("${jwt.secret.secretKey}")
+    private String secretKey;
 
-    private static final int EXPIRATION_TIME = 86400000;
+    @Value("${jwt.expiration}")
+    private Long expiration;
 
-    public String generateToken(String email){
-        String result = Jwts.builder().setSubject(email).setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)).signWith(SignatureAlgorithm.HS256, SECRET_KEY).compact();
+    public Key getSigninKey() {
+        return Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
+
+    public String generateToken(UserPayload payload){
+        String result = Jwts.builder()
+                .setSubject(payload.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigninKey(),SignatureAlgorithm.HS256)
+                .compact();
 
         return result;
     }
 
     public boolean validateToken(String token){
         try {
-            Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
 
             return true;
         } catch (JwtException e){
@@ -29,7 +44,7 @@ public class JwtUtil {
         }
     }
     public String decodeJWT(String token){
-        String email = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody().getSubject();
+        String email = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
 
         return email;
 

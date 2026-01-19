@@ -11,23 +11,21 @@ import java.util.List;
 @Entity
 @Table(name = "classrooms")
 @Builder
+@Setter
+@Getter
 public class Classroom {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    private String name; // Tên lớp học
+    @Column(name = "class_name", nullable = false)
+    private String className;
 
     @ManyToOne
     @JoinColumn(name = "teacher_id")
-    private User teacher; // Giáo viên phụ trách
+    private User teacher;
 
-    @ManyToMany
-    @JoinTable(
-            name = "classroom_students",
-            joinColumns = @JoinColumn(name = "classroom_id"),
-            inverseJoinColumns = @JoinColumn(name = "student_id")
-    )
-    private List<User> students;
+    @OneToMany(mappedBy = "classroom", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
+    private List<ClassroomDetail> classroomDetails;
 }

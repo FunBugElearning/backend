@@ -54,3 +54,4 @@ Nền tảng quản lý lớp học, điểm danh và điểm số xây dựng b
 - JWT secret đang hard-code; nên chuyển sang biến môi trường ở môi trường production.
 
 
+
