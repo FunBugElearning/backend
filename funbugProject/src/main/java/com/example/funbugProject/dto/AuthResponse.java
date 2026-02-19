@@ -1,4 +1,4 @@
-package com.example.funbugProject.DTO;
+package com.example.funbugProject.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

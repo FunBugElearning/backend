@@ -1,6 +1,6 @@
 package com.example.funbugProject.Security;
 
-import com.example.funbugProject.DTO.UserPayload;
+import com.example.funbugProject.dto.UserPayload;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

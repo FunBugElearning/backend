@@ -1,9 +1,9 @@
 package com.example.funbugProject.Service;
 
-import com.example.funbugProject.DTO.AuthResponse;
-import com.example.funbugProject.DTO.UserLoginRequest;
-import com.example.funbugProject.DTO.UserPayload;
-import com.example.funbugProject.DTO.UserRegisterRequest;
+import com.example.funbugProject.dto.AuthResponse;
+import com.example.funbugProject.dto.UserLoginRequest;
+import com.example.funbugProject.dto.UserPayload;
+import com.example.funbugProject.dto.UserRegisterRequest;
 import com.example.funbugProject.Entity.User;
 import com.example.funbugProject.Repository.UserRepository;
 import com.example.funbugProject.Security.JwtUtil;
@@ -127,6 +127,7 @@ public class UserService {
         );
 
     }
+    
 
 
 }

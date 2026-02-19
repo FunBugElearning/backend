@@ -26,6 +26,6 @@ public class Classroom {
     @JoinColumn(name = "teacher_id")
     private User teacher;
 
-    @OneToMany(mappedBy = "classroom", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "classroomId", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
     private List<ClassroomDetail> classroomDetails;
 }

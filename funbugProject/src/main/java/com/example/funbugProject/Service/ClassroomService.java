@@ -1,7 +1,10 @@
 package com.example.funbugProject.Service;
 
-import com.example.funbugProject.DTO.ClassroomCreateRequest;
+import com.example.funbugProject.dto.ClassroomCreateRequest;
 import com.example.funbugProject.Entity.Classroom;
+import com.example.funbugProject.Entity.ClassroomDetail;
+import com.example.funbugProject.Entity.User;
+import com.example.funbugProject.Repository.ClassDetailRepository;
 import com.example.funbugProject.Repository.ClassroomRepository;
 import com.example.funbugProject.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,12 @@ public class ClassroomService {
 
     @Autowired
     private ClassroomRepository classroomRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ClassDetailRepository classDetailRepository;
 
 
     //GET All Classroom
@@ -55,17 +64,31 @@ public class ClassroomService {
         classroomRepository.deleteById(id);
     }
 
-//    //Add Student into Classroom
-//    public Classroom addStudentToClass(int classroomId,String email ) {
-//        Classroom classroom = classroomRepository.findById(classroomId).orElse(null);
-//        User student = userRepository.findByUserEmail(email).orElse(null);
-//
-//        if (classroom != null && student != null) {
-//            classroom.getStudents().add(student);
-//            return classroomRepository.save(classroom);
-//        }
-//        return null;
-//    }
+    // Add student into classroom
+    public Classroom addStudentToClass(int classroomId, String email) {
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Class does not exist with given id: " + classroomId));
+
+        User student = userRepository.findByUserEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "User does not exist with email: " + email));
+
+        boolean alreadyInClass = classroom.getClassroomDetails() != null
+                && classroom.getClassroomDetails().stream()
+                .anyMatch(detail -> detail.getStudentId() != null && detail.getStudentId().getId() == student.getId());
+
+        if (alreadyInClass) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student is already in this classroom");
+        }
+
+        ClassroomDetail classroomDetail = new ClassroomDetail();
+        classroomDetail.setClassroomId(classroom);
+        classroomDetail.setStudentId(student);
+        classDetailRepository.save(classroomDetail);
+
+        return classroomRepository.findById(classroomId).orElse(classroom);
+    }
 
     // Lấy danh sách lớp theo giáo viên
     public List<Classroom> getByTeacherId(int teacherId) {

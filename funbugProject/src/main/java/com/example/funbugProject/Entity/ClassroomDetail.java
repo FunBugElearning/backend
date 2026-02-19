@@ -3,9 +3,6 @@ package com.example.funbugProject.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
-import java.util.List;
-
 @NoArgsConstructor
 @Data
 @AllArgsConstructor

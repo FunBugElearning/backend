@@ -1,4 +1,4 @@
-package com.example.funbugProject.DTO;
+package com.example.funbugProject.dto;
 
 import com.example.funbugProject.Entity.ClassroomDetail;
 import com.example.funbugProject.Entity.User;

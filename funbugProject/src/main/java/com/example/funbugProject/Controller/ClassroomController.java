@@ -1,6 +1,6 @@
 package com.example.funbugProject.Controller;
 
-import com.example.funbugProject.DTO.ClassroomCreateRequest;
+import com.example.funbugProject.dto.ClassroomCreateRequest;
 import com.example.funbugProject.Entity.Classroom;
 import com.example.funbugProject.Service.ClassroomService;
 import org.springframework.beans.factory.annotation.Autowired;

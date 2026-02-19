@@ -1,4 +1,4 @@
-package com.example.funbugProject.DTO;
+package com.example.funbugProject.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,8 +9,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserPayload {
-    private String email;
-    private String username;
-    private int id;
+public class UserRegisterRequest {
+    public String username;
+    public String email;
+    public String password;
 }
