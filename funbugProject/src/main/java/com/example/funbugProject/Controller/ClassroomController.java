@@ -30,6 +30,9 @@ public class ClassroomController {
         return classroomService.updateClassroom(id, classroom);
     }
 
+    //Add student by
+    @PutMapping()
+
     @DeleteMapping("/{id}")
     public void deleteClassroom(@PathVariable int id) {
         classroomService.deleteClassroom(id);
