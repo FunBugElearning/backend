@@ -21,6 +21,6 @@ COPY --from=build /app/target/funbugProject-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
 
-# docker build -t funbug-backend .
+# docker build -t springio/gs-spring-boot-docker .
 
 # docker run --rm -p 8080:8080 funbug-backend

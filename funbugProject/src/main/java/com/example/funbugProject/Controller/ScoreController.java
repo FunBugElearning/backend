@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/scores")
+@RequestMapping("api/v1/scores")
 public class ScoreController {
 
     private final ScoreService scoreService;
