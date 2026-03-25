@@ -1,57 +1,195 @@
-# FunbugProject Backend
+# Smart Akademy Backend (Server)
 
-Nền tảng quản lý lớp học, điểm danh và điểm số xây dựng bằng Spring Boot, sử dụng PostgreSQL và JWT cho xác thực, kèm giao diện Thymeleaf đơn giản.
+NestJS backend service for Smart Akademy.
 
-## Công nghệ chính
-- Spring Boot 3.5, Java 17
-- Spring Data JPA (PostgreSQL), Lombok
-- Spring Security + JWT (jjwt)
-- Thymeleaf templates cho trang web đăng nhập/dashboard
+## Tech stack
 
-## Cấu trúc thư mục
-- `src/main/java/com/example/funbugProject/Controller`: REST API và controller giao diện web (login, dashboard theo vai trò)
-- `src/main/java/com/example/funbugProject/Service`: nghiệp vụ CRUD cho user, lớp học, điểm danh, điểm số
-- `src/main/java/com/example/funbugProject/Repository`: lớp JPA repository
-- `src/main/java/com/example/funbugProject/Entity`: entity `User`, `Role`, `Classroom`, `Attendance`, `Score`
-- `src/main/java/com/example/funbugProject/Security`: cấu hình bảo mật và tiện ích JWT
-- `src/main/resources/templates`: trang `login`, `student`, `teacher`, `admin`
+- NestJS 11
+- TypeScript 5
+- Prisma 7
+- PostgreSQL (via Prisma datasource)
+- Jest 30
+- ESLint 9 + Prettier 3
+- Package manager: `pnpm`
 
-## Cấu hình
-- Tệp `src/main/resources/application.properties` chứa thông tin kết nối PostgreSQL:
-  - `spring.datasource.url=jdbc:postgresql://localhost:5432/funbugdb`
-  - `spring.datasource.username=...`
-  - `spring.datasource.password=...`
-  - `spring.jpa.hibernate.ddl-auto=update`
-- JWT secret và thời hạn token đặt trong `src/main/java/com/example/funbugProject/Security/JwtUtil.java`.
-- Khi triển khai, nên cung cấp giá trị qua biến môi trường (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`) thay vì hard-code.
+## Prerequisites
 
-## Chạy dự án cục bộ
-1) Cài đặt JDK 17, Maven và PostgreSQL.
-2) Tạo database `funbugdb`, cập nhật user/password trong `application.properties` nếu cần.
-3) Chạy ứng dụng: `./mvnw spring-boot:run` (hoặc `mvn spring-boot:run`).
-4) Đóng gói: `mvn clean package` → chạy file `target/funbugProject-0.0.1-SNAPSHOT.jar`.
-5) Ứng dụng mặc định chạy trên `http://localhost:8080`.
+- Node.js 22+
+- `pnpm` installed globally
+- Running PostgreSQL database
 
-## Luồng xác thực & bảo mật
-- `POST /api/auth/login`: nhận `email` + `password`, trả về JWT, role và email.
-- Đặt header `Authorization: Bearer <token>` cho các API yêu cầu bảo vệ.
-- Mở công khai: `/api/auth/**`, `/api/users/**`; các đường dẫn còn lại yêu cầu JWT hợp lệ (lọc qua `JwtFilter`).
-- `GET /api/auth/validate?token=...`: kiểm tra tính hợp lệ của token.
+## Environment variables
 
-## API chính (REST)
-- User: `GET/POST/PUT/DELETE /api/users`
-- Classroom: `GET/POST/PUT/DELETE /api/classrooms`, `GET /api/classrooms/teacher/{teacherId}`
-- Attendance: `GET/POST/PUT/DELETE /attendances`, `GET /attendances/student/{studentId}`
-- Score: `GET/POST/PUT/DELETE /scores`, `GET /scores/{id}`
+Create a `.env` file in project root.
 
-## Giao diện web (Thymeleaf)
-- `/login` (form đăng nhập), `/logout`
-- Sau đăng nhập chuyển trang theo vai trò: `student.html`, `teacher.html`, `admin.html`
-- Các trang demo/dummy: `/student/*`, `/teacher/*`, `/admin/*` cho dashboard và tính năng.
+Required:
 
-## Ghi chú
-- Mật khẩu hiện đang lưu/so sánh dạng rõ; nên mã hóa (vd. BCrypt) trước khi dùng thực tế.
-- JWT secret đang hard-code; nên chuyển sang biến môi trường ở môi trường production.
+- `DATABASE_URL` - PostgreSQL connection string used by Prisma
 
+Optional:
 
+- `PORT` - API port (defaults to `3000`)
 
+## Install and generate Prisma client
+
+```bash
+pnpm install
+pnpm exec prisma generate
+```
+
+Important: this project uses Prisma client from `@prisma/client` (not from `src/generated`).
+
+## Database workflow
+
+```bash
+# Create and apply a new migration in local development
+pnpm exec prisma migrate dev --name <migration_name>
+
+# Apply existing migrations (deployment/CI)
+pnpm exec prisma migrate deploy
+
+# Open Prisma Studio
+pnpm exec prisma studio
+```
+
+## Run the server
+
+```bash
+# Development
+pnpm run start:dev
+
+# Normal start
+pnpm run start
+
+# Debug watch
+pnpm run start:debug
+
+# Production build + run
+pnpm run build
+pnpm run start:prod
+```
+
+## Lint and format
+
+```bash
+# Lint all files (auto-fix enabled)
+pnpm run lint
+
+# Format src + test
+pnpm run format
+
+# Lint one file
+pnpm exec eslint "src/users/users.service.ts" --fix
+
+# Check formatting one file
+pnpm exec prettier --check "src/users/users.service.ts"
+```
+
+## Tests
+
+```bash
+# Run all unit tests
+pnpm run test
+
+# Watch unit tests
+pnpm run test:watch
+
+# Unit coverage
+pnpm run test:cov
+
+# Run all e2e tests
+pnpm run test:e2e
+```
+
+### Run a single unit test file
+
+```bash
+# Preferred
+pnpm run test -- src/app.controller.spec.ts
+
+# Deterministic path mode
+pnpm run test -- --runTestsByPath src/app.controller.spec.ts
+```
+
+### Run a single e2e test file
+
+```bash
+# Preferred
+pnpm run test:e2e -- test/app.e2e-spec.ts
+
+# Deterministic path mode
+pnpm run test:e2e -- --runTestsByPath test/app.e2e-spec.ts
+```
+
+### Run a single test by name
+
+```bash
+# Unit
+pnpm run test -- -t "should return \"Hello World!\""
+
+# E2E
+pnpm run test:e2e -- -t "GET"
+```
+
+## Prisma injection pattern (important)
+
+Prisma is initialized once in `PrismaService` and injected where needed.
+
+- `src/prisma/prisma.service.ts` extends `PrismaClient`
+- `src/prisma/prisma.module.ts` provides/exports `PrismaService`
+- Feature modules import `PrismaModule`
+- Services inject `PrismaService` via constructor DI
+
+Example:
+
+```ts
+constructor(private readonly prisma: PrismaService) {}
+```
+
+Do not create local Prisma instances in feature services (`new PrismaClient(...)`).
+
+## Project structure
+
+```text
+src/
+  app.module.ts
+  main.ts
+  prisma/
+    prisma.module.ts
+    prisma.service.ts
+  users/
+    users.module.ts
+    users.service.ts
+    users.resolver.ts
+    dto/
+    entities/
+prisma/
+  schema.prisma
+test/
+  jest-e2e.json
+```
+
+## Common troubleshooting
+
+### `ReferenceError: exports is not defined in ES module scope`
+
+Cause: stale/incorrect generated Prisma client output.
+
+Fix:
+
+```bash
+pnpm exec prisma generate
+pnpm run build
+```
+
+Also make sure imports use `@prisma/client`.
+
+### GraphQL decorator import errors
+
+If you see errors from `@nestjs/graphql`, install missing GraphQL packages before building.
+
+## Notes for contributors
+
+- Follow `AGENTS.md` for code style and command conventions.
+- Prefer small, focused changes.
+- Update tests together with behavior changes.
