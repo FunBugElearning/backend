@@ -11,6 +11,14 @@ export class PrismaService
   private readonly pool: Pool;
 
   constructor() {
+    if (!process.env.DATABASE_URL) {
+      try {
+        process.loadEnvFile();
+      } catch {
+        // Ignore and fall through to explicit DATABASE_URL error below.
+      }
+    }
+
     const connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {
