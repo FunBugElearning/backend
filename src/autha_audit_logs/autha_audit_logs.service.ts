@@ -1,0 +1,26 @@
+import { Injectable } from '@nestjs/common';
+import { CreateAuthaAuditLogInput } from './dto/create-autha_audit_log.input';
+import { UpdateAuthaAuditLogInput } from './dto/update-autha_audit_log.input';
+
+@Injectable()
+export class AuthaAuditLogsService {
+  create(createAuthaAuditLogInput: CreateAuthaAuditLogInput) {
+    return 'This action adds a new authaAuditLog';
+  }
+
+  findAll() {
+    return `This action returns all authaAuditLogs`;
+  }
+
+  findOne(id: number) {
+    return `This action returns a #${id} authaAuditLog`;
+  }
+
+  update(id: number, updateAuthaAuditLogInput: UpdateAuthaAuditLogInput) {
+    return `This action updates a #${id} authaAuditLog`;
+  }
+
+  remove(id: number) {
+    return `This action removes a #${id} authaAuditLog`;
+  }
+}

@@ -36,15 +36,110 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+type AuthUser {
+  """User ID"""
+  id: Int!
+
+  """User name"""
+  name: String!
+
+  """User email"""
+  email: String!
+}
+
+type Auth {
+  """Authentication success state"""
+  success: Boolean!
+
+  """Authentication response message"""
+  message: String!
+
+  """JWT access token (usually returned on login)"""
+  accessToken: String
+
+  """JWT refresh token (optional)"""
+  refreshToken: String
+
+  """Authenticated or newly registered user profile"""
+  user: AuthUser
+}
+
+type AuthSession {
+  """Session Id"""
+  id: Int!
+
+  """User Id"""
+  user_id: Int!
+
+  """Hash of refresh token"""
+  refresh_toke_hash: String!
+
+  """Name of browser"""
+  browser_agent: String!
+
+  """Ip address"""
+  ip_address: String!
+
+  """Date when session will be expired"""
+  expired_at: DateTime!
+
+  """Date when session was rotated"""
+  rotated_at: DateTime!
+
+  """Date when session was revoked"""
+  revoked_at: DateTime!
+
+  """Date when session was created"""
+  created_at: DateTime!
+
+  """Family Id"""
+  family_id: String!
+
+  """JWT ID"""
+  jti: String!
+}
+
+type AuthaAuditLog {
+  """Audit Log Id"""
+  id: Int!
+
+  """User Id"""
+  user_id: Int!
+
+  """Event Type"""
+  event_type: String!
+
+  """IP Address"""
+  ip_address: String!
+
+  """Browser Agent"""
+  browser_agent: String!
+
+  """Date when event was created"""
+  created_at: DateTime!
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
+  authSessions: [AuthSession!]!
+  authSession(id: Int!): AuthSession!
+  authaAuditLogs: [AuthaAuditLog!]!
+  authaAuditLog(id: Int!): AuthaAuditLog!
 }
 
 type Mutation {
   createUser(createUserInput: CreateUserInput!): User!
   updateUser(updateUserInput: UpdateUserInput!): User!
   removeUser(id: Int!): User!
+  loginAuth(loginAuthInput: LoginAuthInput!): Auth!
+  registerAuth(loginAuthInput: RegisterAuthInput!): Auth!
+  createAuthSession(createAuthSessionInput: CreateAuthSessionInput!): AuthSession!
+  updateAuthSession(updateAuthSessionInput: UpdateAuthSessionInput!): AuthSession!
+  removeAuthSession(id: Int!): AuthSession!
+  createAuthaAuditLog(createAuthaAuditLogInput: CreateAuthaAuditLogInput!): AuthaAuditLog!
+  updateAuthaAuditLog(updateAuthaAuditLogInput: UpdateAuthaAuditLogInput!): AuthaAuditLog!
+  removeAuthaAuditLog(id: Int!): AuthaAuditLog!
 }
 
 input CreateUserInput {
@@ -79,5 +174,109 @@ input UpdateUserInput {
 
   """User address"""
   address: String
+  id: Int!
+}
+
+input LoginAuthInput {
+  """User email"""
+  email: String!
+
+  """User password"""
+  password: String!
+}
+
+input RegisterAuthInput {
+  """User Name"""
+  name: String!
+
+  """User Email"""
+  email: String
+
+  """User Password"""
+  password: String!
+
+  """User Date of Birth"""
+  dateOfBirth: DateTime!
+
+  """User Address"""
+  address: String
+
+  """User Phonenumber"""
+  phoneNumber: String
+}
+
+input CreateAuthSessionInput {
+  """User Id"""
+  user_id: Int!
+
+  """Hash of refresh token"""
+  refresh_toke_hash: String!
+
+  """Name of browser"""
+  browser_agent: String!
+
+  """Ip address"""
+  ip_address: String!
+
+  """Date when session will be expired"""
+  expired_at: DateTime!
+
+  """Date when session was rotated"""
+  rotated_at: DateTime!
+
+  """Date when session was revoked"""
+  revoked_at: DateTime!
+
+  """Date when session was created"""
+  created_at: DateTime!
+
+  """Family Id"""
+  family_id: String!
+
+  """JWT ID"""
+  jti: String!
+}
+
+input UpdateAuthSessionInput {
+  """User Id"""
+  user_id: Int
+
+  """Hash of refresh token"""
+  refresh_toke_hash: String
+
+  """Name of browser"""
+  browser_agent: String
+
+  """Ip address"""
+  ip_address: String
+
+  """Date when session will be expired"""
+  expired_at: DateTime
+
+  """Date when session was rotated"""
+  rotated_at: DateTime
+
+  """Date when session was revoked"""
+  revoked_at: DateTime
+
+  """Date when session was created"""
+  created_at: DateTime
+
+  """Family Id"""
+  family_id: String
+
+  """JWT ID"""
+  jti: String
+  id: Int!
+}
+
+input CreateAuthaAuditLogInput {
+  """Example field (placeholder)"""
+  exampleField: Int!
+}
+
+input UpdateAuthaAuditLogInput {
+  """Example field (placeholder)"""
+  exampleField: Int
   id: Int!
 }

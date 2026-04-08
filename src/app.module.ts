@@ -5,6 +5,9 @@ import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { AuthSessionsModule } from './auth_sessions/auth_sessions.module';
+import { AuthaAuditLogsModule } from './autha_audit_logs/autha_audit_logs.module';
 
 @Module({
   imports: [
@@ -14,6 +17,9 @@ import { UsersModule } from './users/users.module';
       path: '/graphql',
     }),
     UsersModule,
+    AuthModule,
+    AuthSessionsModule,
+    AuthaAuditLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
