@@ -7,13 +7,32 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  name  String
-  email String  @unique
-  password String
-  dateOfBirth DateTime?
-  address String?
-  phoneNumber String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  password     String
+  dateOfBirth  DateTime?
+  address      String?
+  phoneNumber  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  authSessions AuthSession[]
+}
+
+model AuthSession {
+  id                Int      @id @default(autoincrement())
+  user_id           Int
+  refresh_toke_hash String
+  browser_agent     String
+  ip_address        String
+  expired_at        DateTime
+  rotated_at        DateTime
+  revoked_at        DateTime
+  created_at        DateTime @default(now())
+  family_id         String
+  jti               String   @unique
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }

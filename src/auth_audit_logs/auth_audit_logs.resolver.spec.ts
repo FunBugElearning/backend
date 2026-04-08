@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthaAuditLogsResolver } from './autha_audit_logs.resolver';
-import { AuthaAuditLogsService } from './autha_audit_logs.service';
+import { AuthaAuditLogsResolver } from './auth_audit_logs.resolver';
+import { AuthaAuditLogsService } from './auth_audit_logs.service';
 
 describe('AuthaAuditLogsResolver', () => {
   let resolver: AuthaAuditLogsResolver;

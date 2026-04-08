@@ -1,15 +1,18 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
-import { AuthaAuditLogsService } from './autha_audit_logs.service';
-import { AuthaAuditLog } from './entities/autha_audit_log.entity';
-import { CreateAuthaAuditLogInput } from './dto/create-autha_audit_log.input';
-import { UpdateAuthaAuditLogInput } from './dto/update-autha_audit_log.input';
+import { AuthaAuditLogsService } from './auth_audit_logs.service';
+import { AuthaAuditLog } from './entities/auth_audit_log.entity';
+import { CreateAuthaAuditLogInput } from './dto/create-auth_audit_log.input';
+import { UpdateAuthaAuditLogInput } from './dto/update-auth_audit_log.input';
 
 @Resolver(() => AuthaAuditLog)
 export class AuthaAuditLogsResolver {
   constructor(private readonly authaAuditLogsService: AuthaAuditLogsService) {}
 
   @Mutation(() => AuthaAuditLog)
-  createAuthaAuditLog(@Args('createAuthaAuditLogInput') createAuthaAuditLogInput: CreateAuthaAuditLogInput) {
+  createAuthaAuditLog(
+    @Args('createAuthaAuditLogInput')
+    createAuthaAuditLogInput: CreateAuthaAuditLogInput,
+  ) {
     return this.authaAuditLogsService.create(createAuthaAuditLogInput);
   }
 
@@ -24,8 +27,14 @@ export class AuthaAuditLogsResolver {
   }
 
   @Mutation(() => AuthaAuditLog)
-  updateAuthaAuditLog(@Args('updateAuthaAuditLogInput') updateAuthaAuditLogInput: UpdateAuthaAuditLogInput) {
-    return this.authaAuditLogsService.update(updateAuthaAuditLogInput.id, updateAuthaAuditLogInput);
+  updateAuthaAuditLog(
+    @Args('updateAuthaAuditLogInput')
+    updateAuthaAuditLogInput: UpdateAuthaAuditLogInput,
+  ) {
+    return this.authaAuditLogsService.update(
+      updateAuthaAuditLogInput.id,
+      updateAuthaAuditLogInput,
+    );
   }
 
   @Mutation(() => AuthaAuditLog)

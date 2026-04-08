@@ -1,4 +1,5 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+import { Resolver, Mutation, Args, Context } from '@nestjs/graphql';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { Auth } from './entities/auth.entity';
 import { LoginAuthInput } from './dto/login-auth.input';
@@ -14,7 +15,30 @@ export class AuthResolver {
   }
 
   @Mutation(() => Auth)
-  registerAuth(@Args('loginAuthInput') registerAuthInput: RegisterAuthInput) {
-    return this.authService.register(registerAuthInput);
+  registerAuth(
+    @Args('loginAuthInput') registerAuthInput: RegisterAuthInput,
+    @Context('req') req: Request,
+  ) {
+    const userAgentHeader = req.headers['user-agent'];
+    const forwardedForHeader = req.headers['x-forwarded-for'];
+
+    const browserAgent =
+      typeof userAgentHeader === 'string' && userAgentHeader.trim().length > 0
+        ? userAgentHeader
+        : 'unknown';
+
+    const forwardedIp = Array.isArray(forwardedForHeader)
+      ? forwardedForHeader[0]
+      : forwardedForHeader;
+
+    const ipAddress =
+      typeof forwardedIp === 'string' && forwardedIp.trim().length > 0
+        ? forwardedIp.split(',')[0].trim()
+        : (req.ip ?? req.socket.remoteAddress ?? '0.0.0.0');
+
+    return this.authService.register(registerAuthInput, {
+      browser_agent: browserAgent,
+      ip_address: ipAddress,
+    });
   }
 }

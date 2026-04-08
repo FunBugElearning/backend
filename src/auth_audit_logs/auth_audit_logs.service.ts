@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthaAuditLogInput } from './dto/create-autha_audit_log.input';
-import { UpdateAuthaAuditLogInput } from './dto/update-autha_audit_log.input';
+import { CreateAuthaAuditLogInput } from './dto/create-auth_audit_log.input';
+import { UpdateAuthaAuditLogInput } from './dto/update-auth_audit_log.input';
 
 @Injectable()
 export class AuthaAuditLogsService {
