@@ -16,7 +16,7 @@ export class AuthResolver {
 
   @Mutation(() => Auth)
   registerAuth(
-    @Args('loginAuthInput') registerAuthInput: RegisterAuthInput,
+    @Args('registerAuthInput') registerAuthInput: RegisterAuthInput,
     @Context('req') req: Request,
   ) {
     const userAgentHeader = req.headers['user-agent'];

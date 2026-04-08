@@ -133,7 +133,7 @@ type Mutation {
   updateUser(updateUserInput: UpdateUserInput!): User!
   removeUser(id: Int!): User!
   loginAuth(loginAuthInput: LoginAuthInput!): Auth!
-  registerAuth(loginAuthInput: RegisterAuthInput!): Auth!
+  registerAuth(registerAuthInput: RegisterAuthInput!): Auth!
   createAuthSession(createAuthSessionInput: CreateAuthSessionInput!): AuthSession!
   updateAuthSession(updateAuthSessionInput: UpdateAuthSessionInput!): AuthSession!
   removeAuthSession(id: Int!): AuthSession!
