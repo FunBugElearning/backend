@@ -7,17 +7,13 @@ import { hashPassword } from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { signAccessToken, signRefreshToken } from 'src/utils/jwt_session.utils';
 import { validateRegisterInput } from 'src/middleware/auth-validation.middleware';
-
-type SessionMetadata = {
-  browser_agent: string;
-  ip_address: string;
-};
+import type { SessionMetadata } from 'src/utils/agent.utils';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  login(loginAuthInput: LoginAuthInput) {
+  login(loginAuthInput: LoginAuthInput, sessionMetadata: SessionMetadata,) {
     return 'This action adds a new auth';
   }
 

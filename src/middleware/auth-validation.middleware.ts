@@ -1,4 +1,9 @@
-import moment from 'moment';
+import { logger } from 'src/helper/logger';
+import {
+  validateDob,
+  validateEmail,
+  validateEmptyFields,
+} from 'src/utils/validator';
 
 type RegisterInput = {
   name: string;
@@ -26,37 +31,24 @@ type RegisterValidationResult =
       message: string;
     };
 
-export function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-export function validateDob(
-  dateOfBirth: unknown,
-): { ok: true; value: Date } | { ok: false } {
-  if (!dateOfBirth) {
-    return { ok: false };
-  }
-
-  const parsedDob = moment(dateOfBirth, moment.ISO_8601, true);
-
-  if (!parsedDob.isValid() || parsedDob.isAfter(moment())) {
-    return { ok: false };
-  }
-
-  return { ok: true, value: parsedDob.toDate() };
-}
-
 export function validateRegisterInput(
   payload: RegisterInput,
 ): RegisterValidationResult {
+  logger.info('Validating register input', { payload });
   const name = payload.name?.trim();
   const email = payload.email?.trim().toLowerCase();
   const password = payload.password?.trim();
+  const emptyFields = validateEmptyFields({
+    name,
+    email,
+    password,
+    dateOfBirth: payload.dateOfBirth,
+  });
 
-  if (!name || !email || !password) {
+  if (emptyFields.length > 0) {
     return {
       ok: false,
-      message: 'name, email and password are required',
+      message: `Empty fields: ${emptyFields.join(', ')}`,
     };
   }
 
