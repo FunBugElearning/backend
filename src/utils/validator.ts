@@ -13,3 +13,8 @@ export function validateEmptyFields(payload: Record<string, any>): string[] {
 
     return emptyFields;
 }
+
+export function validateEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}

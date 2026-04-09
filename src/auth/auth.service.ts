@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { LoginAuthInput } from './dto/login-auth.input';
 import { RegisterAuthInput } from './dto/register-auth.input';
-import { validateEmptyFields } from 'src/utils/validator';
 import { logger } from 'src/helper/logger';
 import { hashPassword } from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { signAccessToken, signRefreshToken } from 'src/utils/jwt_session.utils';
+import { validateRegisterInput } from 'src/middleware/auth-validation.middleware';
 
 type SessionMetadata = {
   browser_agent: string;
@@ -26,20 +26,17 @@ export class AuthService {
     sessionMetadata: SessionMetadata,
   ) {
     try {
-      const { name, email, password, dateOfBirth, address, phoneNumber } =
-        registerAuthInput;
+      const validation = validateRegisterInput(registerAuthInput);
 
-      const validateResult = validateEmptyFields({
-        name,
-        email,
-        password,
-        dateOfBirth,
-      });
-
-      if (validateResult.length > 0) {
-        logger.error(`Empty fields: ${validateResult.join(', ')}`);
-        throw new Error(`Empty fields: ${validateResult.join(', ')}`);
+      if (!validation.ok) {
+        return {
+          success: false,
+          message: validation.message,
+        };
       }
+
+      const { name, email, password, dateOfBirth, address, phoneNumber } =
+        validation.data;
 
       const existingUser = await this.prisma.user.findUnique({
         where: { email },
