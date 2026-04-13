@@ -75,6 +75,10 @@ export class UsersService {
           ? undefined
           : { role: { connect: { id: await this.resolveRoleId(role_id) } } };
 
+      if (updateUserInput.password) {
+        data.password = await hashPassword(updateUserInput.password);
+      }
+
       return this.prisma.user.update({
         where: { id },
         data: {
