@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthaAuditLogsResolver } from './auth_audit_logs.resolver';
-import { AuthaAuditLogsService } from './auth_audit_logs.service';
+import { AuthAuditLogsResolver } from './auth_audit_logs.resolver';
+import { AuthAuditLogsService } from './auth_audit_logs.service';
 
-describe('AuthaAuditLogsResolver', () => {
-  let resolver: AuthaAuditLogsResolver;
+describe('AuthAuditLogsResolver', () => {
+  let resolver: AuthAuditLogsResolver;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AuthaAuditLogsResolver, AuthaAuditLogsService],
+      providers: [AuthAuditLogsResolver, AuthAuditLogsService],
     }).compile();
 
-    resolver = module.get<AuthaAuditLogsResolver>(AuthaAuditLogsResolver);
+    resolver = module.get<AuthAuditLogsResolver>(AuthAuditLogsResolver);
   });
 
   it('should be defined', () => {

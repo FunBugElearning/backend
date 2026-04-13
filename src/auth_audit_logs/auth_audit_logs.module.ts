@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AuthaAuditLogsService } from './auth_audit_logs.service';
-import { AuthaAuditLogsResolver } from './auth_audit_logs.resolver';
+import { AuthAuditLogsService } from './auth_audit_logs.service';
+import { AuthAuditLogsResolver } from './auth_audit_logs.resolver';
 
 @Module({
-  providers: [AuthaAuditLogsResolver, AuthaAuditLogsService],
+  providers: [AuthAuditLogsResolver, AuthAuditLogsService],
 })
-export class AuthaAuditLogsModule {}
+export class AuthAuditLogsModule {}

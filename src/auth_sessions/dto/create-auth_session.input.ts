@@ -20,7 +20,7 @@ export class CreateAuthSessionInput {
   @Field(() => Date, { description: "Date when session was rotated"})
   rotated_at: Date;
 
-  @Field(() => Date, { description: "Date when session was revoked"})
+  @Field(() => Date, { description: "Date when session was revoked", nullable: true })
   revoked_at: Date;
 
   @Field(() => Date, { description: "Date when session was created"})

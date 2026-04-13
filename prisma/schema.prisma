@@ -17,6 +17,7 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   authSessions AuthSession[]
+  authAuditLogs AuthAuditLog[]
 }
 
 model AuthSession {
@@ -27,10 +28,23 @@ model AuthSession {
   ip_address        String
   expired_at        DateTime
   rotated_at        DateTime
-  revoked_at        DateTime
+  revoked_at        DateTime?
   created_at        DateTime @default(now())
   family_id         String
   jti               String   @unique
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model AuthAuditLog {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  event_type   String
+  ip_address   String
+  browser_agent String
+  created_at   DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 

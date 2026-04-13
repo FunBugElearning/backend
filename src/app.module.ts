@@ -8,7 +8,9 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthSessionsModule } from './auth_sessions/auth_sessions.module';
-import { AuthaAuditLogsModule } from './auth_audit_logs/auth_audit_logs.module';
+import { AuthAuditLogsModule } from './auth_audit_logs/auth_audit_logs.module';
+import { ClassesModule } from './classes/classes.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -21,7 +23,9 @@ import { AuthaAuditLogsModule } from './auth_audit_logs/auth_audit_logs.module';
     UsersModule,
     AuthModule,
     AuthSessionsModule,
-    AuthaAuditLogsModule,
+    AuthAuditLogsModule,
+    ClassesModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

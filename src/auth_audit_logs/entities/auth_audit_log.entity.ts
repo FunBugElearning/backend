@@ -1,7 +1,7 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
 
 @ObjectType()
-export class AuthaAuditLog {
+export class AuthAuditLog {
   @Field(() => Int, { description: 'Audit Log Id' })
   id: number;
 

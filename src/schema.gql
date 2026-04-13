@@ -24,6 +24,9 @@ type User {
   """User Phonenumber"""
   phoneNumber: String
 
+  """User Role"""
+  role: String!
+
   """User Created At"""
   createdAt: DateTime!
 
@@ -87,7 +90,7 @@ type AuthSession {
   rotated_at: DateTime!
 
   """Date when session was revoked"""
-  revoked_at: DateTime!
+  revoked_at: DateTime
 
   """Date when session was created"""
   created_at: DateTime!
@@ -99,7 +102,7 @@ type AuthSession {
   jti: String!
 }
 
-type AuthaAuditLog {
+type AuthAuditLog {
   """Audit Log Id"""
   id: Int!
 
@@ -119,13 +122,32 @@ type AuthaAuditLog {
   created_at: DateTime!
 }
 
+type Class {
+  """Class Id"""
+  id: Int!
+
+  """Class Name"""
+  name: String!
+
+  """Class Description"""
+  description: String
+
+  """Class Created At"""
+  createdAt: DateTime!
+
+  """Class Updated At"""
+  updatedAt: DateTime!
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
   authSessions: [AuthSession!]!
   authSession(id: Int!): AuthSession!
-  authaAuditLogs: [AuthaAuditLog!]!
-  authaAuditLog(id: Int!): AuthaAuditLog!
+  authAuditLogs: [AuthAuditLog!]!
+  authAuditLog(id: Int!): AuthAuditLog!
+  classes: [Class!]!
+  class(id: Int!): Class!
 }
 
 type Mutation {
@@ -137,9 +159,12 @@ type Mutation {
   createAuthSession(createAuthSessionInput: CreateAuthSessionInput!): AuthSession!
   updateAuthSession(updateAuthSessionInput: UpdateAuthSessionInput!): AuthSession!
   removeAuthSession(id: Int!): AuthSession!
-  createAuthaAuditLog(createAuthaAuditLogInput: CreateAuthaAuditLogInput!): AuthaAuditLog!
-  updateAuthaAuditLog(updateAuthaAuditLogInput: UpdateAuthaAuditLogInput!): AuthaAuditLog!
-  removeAuthaAuditLog(id: Int!): AuthaAuditLog!
+  createAuthAuditLog(createAuthAuditLogInput: CreateAuthAuditLogInput!): AuthAuditLog!
+  updateAuthAuditLog(updateAuthAuditLogInput: UpdateAuthAuditLogInput!): AuthAuditLog!
+  removeAuthAuditLog(id: Int!): AuthAuditLog!
+  createClass(createClassInput: CreateClassInput!): Class!
+  updateClass(updateClassInput: UpdateClassInput!): Class!
+  removeClass(id: Int!): Class!
 }
 
 input CreateUserInput {
@@ -225,7 +250,7 @@ input CreateAuthSessionInput {
   rotated_at: DateTime!
 
   """Date when session was revoked"""
-  revoked_at: DateTime!
+  revoked_at: DateTime
 
   """Date when session was created"""
   created_at: DateTime!
@@ -270,12 +295,23 @@ input UpdateAuthSessionInput {
   id: Int!
 }
 
-input CreateAuthaAuditLogInput {
+input CreateAuthAuditLogInput {
   """Example field (placeholder)"""
   exampleField: Int!
 }
 
-input UpdateAuthaAuditLogInput {
+input UpdateAuthAuditLogInput {
+  """Example field (placeholder)"""
+  exampleField: Int
+  id: Int!
+}
+
+input CreateClassInput {
+  """Example field (placeholder)"""
+  exampleField: Int!
+}
+
+input UpdateClassInput {
   """Example field (placeholder)"""
   exampleField: Int
   id: Int!

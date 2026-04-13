@@ -3,18 +3,101 @@ import { randomUUID } from 'crypto';
 import { LoginAuthInput } from './dto/login-auth.input';
 import { RegisterAuthInput } from './dto/register-auth.input';
 import { logger } from 'src/helper/logger';
-import { hashPassword } from 'src/utils/password.utils';
+import { comparePassword, hashPassword } from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { signAccessToken, signRefreshToken } from 'src/utils/jwt_session.utils';
-import { validateRegisterInput } from 'src/middleware/auth-validation.middleware';
+import { validateLoginInput, validateRegisterInput } from 'src/middleware/auth-validation.middleware';
 import type { SessionMetadata } from 'src/utils/agent.utils';
 
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService) { }
 
-  login(loginAuthInput: LoginAuthInput, sessionMetadata: SessionMetadata,) {
-    return 'This action adds a new auth';
+  async login(loginAuthInput: LoginAuthInput, sessionMetadata: SessionMetadata,) {
+    try {
+      const validation = validateLoginInput(loginAuthInput);
+
+      if (!validation.ok) {
+        return {
+          success: false,
+          message: validation.message,
+        };
+      }
+
+      const { email, password } = validation.data;
+
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'Invalid email',
+        };
+      }
+
+      const isPasswordValid = await comparePassword(password, user?.password);
+
+      if (!isPasswordValid) {
+        return {
+          success: false,
+          message: 'Invalid password',
+        };
+      }
+
+      const accessToken = await signAccessToken({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+      });
+
+      const refreshToken = await signRefreshToken({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+      });
+
+      const hashedRefreshToken = await hashPassword(refreshToken);
+      const now = new Date();
+      const sessionTtlMs = this.parseDurationToMs(
+        process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
+      );
+      const expiredAt = new Date(now.getTime() + sessionTtlMs);
+
+      await this.prisma.authSession.create({
+        data: {
+          user_id: user.id,
+          refresh_toke_hash: hashedRefreshToken,
+          browser_agent: sessionMetadata.browser_agent,
+          ip_address: sessionMetadata.ip_address,
+          expired_at: expiredAt,
+          rotated_at: now,
+          revoked_at: null,
+          created_at: now,
+          family_id: randomUUID(),
+          jti: randomUUID(),
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Login successful',
+        user,
+        accessToken,
+        refreshToken,
+      };
+    } catch (error) {
+      logger.error('Login failed', { error });
+
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Login failed unexpectedly',
+      };
+    }
   }
 
   async register(
@@ -73,7 +156,7 @@ export class AuthService {
       const hashedRefreshToken = await hashPassword(refreshToken);
       const now = new Date();
       const sessionTtlMs = this.parseDurationToMs(
-        process.env.REFRESH_TOKEN_EXPIRATION ?? '21d',
+        process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
       );
       const expiredAt = new Date(now.getTime() + sessionTtlMs);
 
@@ -85,7 +168,7 @@ export class AuthService {
           ip_address: sessionMetadata.ip_address,
           expired_at: expiredAt,
           rotated_at: now,
-          revoked_at: now,
+          revoked_at: null,
           created_at: now,
           family_id: randomUUID(),
           jti: randomUUID(),

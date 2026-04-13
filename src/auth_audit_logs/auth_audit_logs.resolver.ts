@@ -1,44 +1,44 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
-import { AuthaAuditLogsService } from './auth_audit_logs.service';
-import { AuthaAuditLog } from './entities/auth_audit_log.entity';
-import { CreateAuthaAuditLogInput } from './dto/create-auth_audit_log.input';
-import { UpdateAuthaAuditLogInput } from './dto/update-auth_audit_log.input';
+import { AuthAuditLogsService } from './auth_audit_logs.service';
+import { AuthAuditLog } from './entities/auth_audit_log.entity';
+import { CreateAuthAuditLogInput } from './dto/create-auth_audit_log.input';
+import { UpdateAuthAuditLogInput } from './dto/update-auth_audit_log.input';
 
-@Resolver(() => AuthaAuditLog)
-export class AuthaAuditLogsResolver {
-  constructor(private readonly authaAuditLogsService: AuthaAuditLogsService) {}
+@Resolver(() => AuthAuditLog)
+export class AuthAuditLogsResolver {
+  constructor(private readonly authAuditLogsService: AuthAuditLogsService) {}
 
-  @Mutation(() => AuthaAuditLog)
-  createAuthaAuditLog(
-    @Args('createAuthaAuditLogInput')
-    createAuthaAuditLogInput: CreateAuthaAuditLogInput,
+  @Mutation(() => AuthAuditLog)
+  createAuthAuditLog(
+    @Args('createAuthAuditLogInput')
+    createAuthAuditLogInput: CreateAuthAuditLogInput,
   ) {
-    return this.authaAuditLogsService.create(createAuthaAuditLogInput);
+    return this.authAuditLogsService.create(createAuthAuditLogInput);
   }
 
-  @Query(() => [AuthaAuditLog], { name: 'authaAuditLogs' })
+  @Query(() => [AuthAuditLog], { name: 'authAuditLogs' })
   findAll() {
-    return this.authaAuditLogsService.findAll();
+    return this.authAuditLogsService.findAll();
   }
 
-  @Query(() => AuthaAuditLog, { name: 'authaAuditLog' })
+  @Query(() => AuthAuditLog, { name: 'authAuditLog' })
   findOne(@Args('id', { type: () => Int }) id: number) {
-    return this.authaAuditLogsService.findOne(id);
+    return this.authAuditLogsService.findOne(id);
   }
 
-  @Mutation(() => AuthaAuditLog)
-  updateAuthaAuditLog(
-    @Args('updateAuthaAuditLogInput')
-    updateAuthaAuditLogInput: UpdateAuthaAuditLogInput,
+  @Mutation(() => AuthAuditLog)
+  updateAuthAuditLog(
+    @Args('updateAuthAuditLogInput')
+    updateAuthAuditLogInput: UpdateAuthAuditLogInput,
   ) {
-    return this.authaAuditLogsService.update(
-      updateAuthaAuditLogInput.id,
-      updateAuthaAuditLogInput,
+    return this.authAuditLogsService.update(
+      updateAuthAuditLogInput.id,
+      updateAuthAuditLogInput,
     );
   }
 
-  @Mutation(() => AuthaAuditLog)
-  removeAuthaAuditLog(@Args('id', { type: () => Int }) id: number) {
-    return this.authaAuditLogsService.remove(id);
+  @Mutation(() => AuthAuditLog)
+  removeAuthAuditLog(@Args('id', { type: () => Int }) id: number) {
+    return this.authAuditLogsService.remove(id);
   }
 }
