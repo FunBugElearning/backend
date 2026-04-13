@@ -7,7 +7,16 @@ describe('AuthResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AuthResolver, AuthService],
+      providers: [
+        AuthResolver,
+        {
+          provide: AuthService,
+          useValue: {
+            login: jest.fn(),
+            register: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     resolver = module.get<AuthResolver>(AuthResolver);

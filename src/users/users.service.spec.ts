@@ -19,6 +19,10 @@ describe('UsersService', () => {
               update: jest.fn(),
               delete: jest.fn(),
             },
+            role: {
+              findUnique: jest.fn(),
+              upsert: jest.fn(),
+            },
           },
         },
       ],

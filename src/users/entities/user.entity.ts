@@ -1,11 +1,6 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IsEmail } from 'class-validator';
-
-enum Role {
-  STUDENT = 'student',
-  TEACHER = 'teacher',
-  ADMIN = 'admin',
-}
+import { Role } from '../../roles/entities/role.entity';
 
 @ObjectType()
 export class User {
@@ -31,7 +26,10 @@ export class User {
   @Field(() => String, { nullable: true, description: 'User Phonenumber' })
   phoneNumber?: string;
 
-  @Field(() => String, { description: 'User Role', defaultValue: 'student' })
+  @Field(() => Int, { description: 'User Role Id' })
+  role_id: number;
+
+  @Field(() => Role, { description: 'User Role' })
   role: Role;
 
   @Field(() => Date, { description: 'User Created At' })

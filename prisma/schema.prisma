@@ -14,10 +14,23 @@ model User {
   dateOfBirth  DateTime?
   address      String?
   phoneNumber  String?
+  role_id      Int
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   authSessions AuthSession[]
   authAuditLogs AuthAuditLog[]
+  role         Role          @relation(fields: [role_id], references: [id])
+
+  @@index([role_id])
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
 }
 
 model AuthSession {

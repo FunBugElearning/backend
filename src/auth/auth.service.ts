@@ -6,14 +6,20 @@ import { logger } from 'src/helper/logger';
 import { comparePassword, hashPassword } from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { signAccessToken, signRefreshToken } from 'src/utils/jwt_session.utils';
-import { validateLoginInput, validateRegisterInput } from 'src/middleware/auth-validation.middleware';
+import {
+  validateLoginInput,
+  validateRegisterInput,
+} from 'src/middleware/auth-validation.middleware';
 import type { SessionMetadata } from 'src/utils/agent.utils';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  async login(loginAuthInput: LoginAuthInput, sessionMetadata: SessionMetadata,) {
+  async login(
+    loginAuthInput: LoginAuthInput,
+    sessionMetadata: SessionMetadata,
+  ) {
     try {
       const validation = validateLoginInput(loginAuthInput);
 
@@ -28,6 +34,7 @@ export class AuthService {
 
       const user = await this.prisma.user.findUnique({
         where: { email },
+        include: { role: true },
       });
 
       if (!user) {
@@ -93,9 +100,7 @@ export class AuthService {
       return {
         success: false,
         message:
-          error instanceof Error
-            ? error.message
-            : 'Login failed unexpectedly',
+          error instanceof Error ? error.message : 'Login failed unexpectedly',
       };
     }
   }
@@ -138,7 +143,13 @@ export class AuthService {
           dateOfBirth,
           address,
           phoneNumber,
+          role: {
+            connect: {
+              id: await this.resolveDefaultRoleId(),
+            },
+          },
         },
+        include: { role: true },
       });
 
       const accessToken = await signAccessToken({
@@ -218,5 +229,18 @@ export class AuthService {
     }
 
     return amount * 24 * 60 * 60 * 1000;
+  }
+
+  private async resolveDefaultRoleId(): Promise<number> {
+    const role = await this.prisma.role.upsert({
+      where: { name: 'student' },
+      update: {},
+      create: {
+        name: 'student',
+        description: 'Default student role',
+      },
+    });
+
+    return role.id;
   }
 }

@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { Role } from '../../roles/entities/role.entity';
 
 @ObjectType()
 export class AuthUser {
@@ -10,6 +11,9 @@ export class AuthUser {
 
   @Field(() => String, { description: 'User email' })
   email: string;
+
+  @Field(() => Role, { description: 'User role' })
+  role: Role;
 }
 
 @ObjectType()

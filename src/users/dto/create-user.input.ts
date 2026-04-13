@@ -16,4 +16,10 @@ export class CreateUserInput {
 
   @Field({ description: 'User address' })
   address: string;
+
+  @Field({ nullable: true, description: 'User phonenumber' })
+  phoneNumber?: string;
+
+  @Field(() => Int, { nullable: true, description: 'User role id' })
+  role_id?: number;
 }

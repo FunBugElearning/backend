@@ -1,7 +1,13 @@
-import { InputType, Int, Field } from '@nestjs/graphql';
+import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class CreateRoleInput {
-  @Field(() => Int, { description: 'Example field (placeholder)' })
-  exampleField: number;
+  @Field(() => String, { description: 'Role Name' })
+  name: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Role Description',
+  })
+  description?: string;
 }

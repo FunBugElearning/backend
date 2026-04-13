@@ -1,34 +1,56 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { PrismaService } from '../prisma/prisma.service';
 import { logger } from 'src/helper/logger';
+import { hashPassword } from 'src/utils/password.utils';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  create(createUserInput: CreateUserInput) {
-
+  async create(createUserInput: CreateUserInput) {
     try {
+      const { role_id, ...data } = createUserInput;
+      const resolvedRoleId = await this.resolveRoleId(role_id);
+
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: createUserInput.email },
+      });
+
+      if (existingUser) {
+        throw new ServiceUnavailableException('Email is already in use');
+      }
+
+      const hashedPassword = await hashPassword(createUserInput.password);
+
       return this.prisma.user.create({
-        data: { ...createUserInput },
+        data: {
+          ...data,
+          password: hashedPassword,
+          role: { connect: { id: resolvedRoleId } },
+        },
+        include: { role: true },
       });
     } catch (error) {
-      logger.error('Error creating user', { error });
-      throw error;
+      this.handleServiceError('Error creating user', error);
     }
-
   }
 
   async findAll() {
     try {
-      const users = await this.prisma.user.findMany();
+      const users = await this.prisma.user.findMany({
+        include: { role: true },
+      });
       logger.info('Finding all users', { data: users });
       return users;
     } catch (error) {
-      logger.error('Error finding all users', { error });
-      throw error;
+      this.handleServiceError('Error finding all users', error);
     }
   }
 
@@ -36,25 +58,33 @@ export class UsersService {
     try {
       return this.prisma.user.findUnique({
         where: { id },
+        include: { role: true },
       });
     } catch (error) {
-      logger.error('Error finding user', { error });
-      throw error;
+      this.handleServiceError('Error finding user', error);
     }
   }
 
-  update(id: number, updateUserInput: UpdateUserInput) {
-    const { id: inputId, ...data } = updateUserInput;
-    void inputId;
-
+  async update(id: number, updateUserInput: UpdateUserInput) {
     try {
+      const { id: inputId, role_id, ...data } = updateUserInput;
+      void inputId;
+
+      const roleData =
+        role_id === undefined
+          ? undefined
+          : { role: { connect: { id: await this.resolveRoleId(role_id) } } };
+
       return this.prisma.user.update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          ...(roleData ?? {}),
+        },
+        include: { role: true },
       });
     } catch (error) {
-      logger.error('Error updating user', { error });
-      throw error;
+      this.handleServiceError('Error updating user', error);
     }
   }
 
@@ -64,8 +94,59 @@ export class UsersService {
         where: { id },
       });
     } catch (error) {
-      logger.error('Error removing user', { error });
+      this.handleServiceError('Error removing user', error);
+    }
+  }
+
+  private async resolveRoleId(roleId?: number): Promise<number> {
+    if (roleId !== undefined) {
+      const role = await this.prisma.role.findUnique({
+        where: { id: roleId },
+      });
+
+      if (!role) {
+        throw new NotFoundException('Role is not found');
+      }
+
+      return role.id;
+    }
+
+    const studentRole = await this.prisma.role.upsert({
+      where: { name: 'student' },
+      update: {},
+      create: {
+        name: 'student',
+        description: 'Default student role',
+      },
+    });
+
+    return studentRole.id;
+  }
+
+  private handleServiceError(message: string, error: unknown): never {
+    logger.error(message, { error });
+
+    if (error instanceof NotFoundException) {
       throw error;
     }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P1001'
+    ) {
+      throw new ServiceUnavailableException('Database server is unreachable');
+    }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2021' &&
+      error.meta?.modelName === 'Role'
+    ) {
+      throw new ServiceUnavailableException(
+        'Database schema is outdated. Run Prisma migrations.',
+      );
+    }
+
+    throw error;
   }
 }

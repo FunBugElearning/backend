@@ -2,6 +2,28 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type Role {
+  """Role Id"""
+  id: Int!
+
+  """Role Name"""
+  name: String!
+
+  """Role Description"""
+  description: String
+
+  """Role Created At"""
+  createdAt: DateTime!
+
+  """Role Updated At"""
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
 type User {
   """User Id"""
   id: Int!
@@ -24,8 +46,11 @@ type User {
   """User Phonenumber"""
   phoneNumber: String
 
+  """User Role Id"""
+  role_id: Int!
+
   """User Role"""
-  role: String!
+  role: Role!
 
   """User Created At"""
   createdAt: DateTime!
@@ -33,11 +58,6 @@ type User {
   """User Updated At"""
   updatedAt: DateTime!
 }
-
-"""
-A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
-"""
-scalar DateTime
 
 type AuthUser {
   """User ID"""
@@ -48,6 +68,9 @@ type AuthUser {
 
   """User email"""
   email: String!
+
+  """User role"""
+  role: Role!
 }
 
 type Auth {
@@ -148,6 +171,8 @@ type Query {
   authAuditLog(id: Int!): AuthAuditLog!
   classes: [Class!]!
   class(id: Int!): Class!
+  roles: [Role!]!
+  role(id: Int!): Role!
 }
 
 type Mutation {
@@ -165,6 +190,9 @@ type Mutation {
   createClass(createClassInput: CreateClassInput!): Class!
   updateClass(updateClassInput: UpdateClassInput!): Class!
   removeClass(id: Int!): Class!
+  createRole(createRoleInput: CreateRoleInput!): Role!
+  updateRole(updateRoleInput: UpdateRoleInput!): Role!
+  removeRole(id: Int!): Role!
 }
 
 input CreateUserInput {
@@ -182,6 +210,12 @@ input CreateUserInput {
 
   """User address"""
   address: String!
+
+  """User phonenumber"""
+  phoneNumber: String
+
+  """User role id"""
+  role_id: Int
 }
 
 input UpdateUserInput {
@@ -199,6 +233,12 @@ input UpdateUserInput {
 
   """User address"""
   address: String
+
+  """User phonenumber"""
+  phoneNumber: String
+
+  """User role id"""
+  role_id: Int
   id: Int!
 }
 
@@ -314,5 +354,22 @@ input CreateClassInput {
 input UpdateClassInput {
   """Example field (placeholder)"""
   exampleField: Int
+  id: Int!
+}
+
+input CreateRoleInput {
+  """Role Name"""
+  name: String!
+
+  """Role Description"""
+  description: String
+}
+
+input UpdateRoleInput {
+  """Role Name"""
+  name: String
+
+  """Role Description"""
+  description: String
   id: Int!
 }

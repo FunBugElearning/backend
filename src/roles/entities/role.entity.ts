@@ -7,4 +7,13 @@ export class Role {
 
   @Field(() => String, { description: 'Role Name' })
   name: string;
+
+  @Field(() => String, { nullable: true, description: 'Role Description' })
+  description?: string;
+
+  @Field(() => Date, { description: 'Role Created At' })
+  createdAt: Date;
+
+  @Field(() => Date, { description: 'Role Updated At' })
+  updatedAt: Date;
 }
