@@ -17,37 +17,37 @@ type RegisterInput = {
 type LoginInput = {
   email: string;
   password: string;
-}
+};
 
 type LoginValidationResult =
   | {
-    ok: true;
-    data: {
-      email: string;
-      password: string;
-    };
-  }
+      ok: true;
+      data: {
+        email: string;
+        password: string;
+      };
+    }
   | {
-    ok: false;
-    message: string;
-  };
+      ok: false;
+      message: string;
+    };
 
 type RegisterValidationResult =
   | {
-    ok: true;
-    data: {
-      name: string;
-      email: string;
-      password: string;
-      dateOfBirth: Date;
-      address?: string;
-      phoneNumber?: string;
-    };
-  }
+      ok: true;
+      data: {
+        name: string;
+        email: string;
+        password: string;
+        dateOfBirth: Date;
+        address?: string;
+        phoneNumber?: string;
+      };
+    }
   | {
-    ok: false;
-    message: string;
-  };
+      ok: false;
+      message: string;
+    };
 
 export function validateRegisterInput(
   payload: RegisterInput,
@@ -99,9 +99,7 @@ export function validateRegisterInput(
   };
 }
 
-export function validateLoginInput(
-  payload: LoginInput,
-): LoginValidationResult {
+export function validateLoginInput(payload: LoginInput): LoginValidationResult {
   logger.info('Validating login input', { payload });
   const email = payload.email?.trim().toLowerCase();
   const password = payload.password?.trim();

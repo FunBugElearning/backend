@@ -11,7 +11,10 @@ export class AuthResolver {
   constructor(private readonly authService: AuthService) {}
 
   @Mutation(() => Auth)
-  loginAuth(@Args('loginAuthInput') loginAuthInput: LoginAuthInput, @Context('req') req: Request,) {
+  loginAuth(
+    @Args('loginAuthInput') loginAuthInput: LoginAuthInput,
+    @Context('req') req: Request,
+  ) {
     const sessionMetadata = getSessionMetadata(req);
 
     return this.authService.login(loginAuthInput, sessionMetadata);

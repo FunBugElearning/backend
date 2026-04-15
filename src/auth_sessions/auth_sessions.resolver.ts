@@ -9,7 +9,10 @@ export class AuthSessionsResolver {
   constructor(private readonly authSessionsService: AuthSessionsService) {}
 
   @Mutation(() => AuthSession)
-  createAuthSession(@Args('createAuthSessionInput') createAuthSessionInput: CreateAuthSessionInput) {
+  createAuthSession(
+    @Args('createAuthSessionInput')
+    createAuthSessionInput: CreateAuthSessionInput,
+  ) {
     return this.authSessionsService.create(createAuthSessionInput);
   }
 
@@ -24,8 +27,14 @@ export class AuthSessionsResolver {
   }
 
   @Mutation(() => AuthSession)
-  updateAuthSession(@Args('updateAuthSessionInput') updateAuthSessionInput: UpdateAuthSessionInput) {
-    return this.authSessionsService.update(updateAuthSessionInput.id, updateAuthSessionInput);
+  updateAuthSession(
+    @Args('updateAuthSessionInput')
+    updateAuthSessionInput: UpdateAuthSessionInput,
+  ) {
+    return this.authSessionsService.update(
+      updateAuthSessionInput.id,
+      updateAuthSessionInput,
+    );
   }
 
   @Mutation(() => AuthSession)
