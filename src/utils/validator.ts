@@ -1,19 +1,22 @@
 import moment from 'moment';
 
-export function validateEmptyFields(payload: Record<string, any>): string[] {
+export function validateEmptyFields(
+  payload: Record<string, unknown>,
+): string[] {
   const emptyFields: string[] = [];
 
   for (const [key, value] of Object.entries(payload)) {
     const isPlainObject =
       typeof value === 'object' &&
       value !== null &&
-      value.constructor === Object;
+      (value as Record<string, unknown>).constructor === Object;
 
     const isEmpty =
       value === null ||
       value === undefined ||
       (typeof value === 'string' && value.trim() === '') ||
-      (isPlainObject && Object.keys(value).length === 0);
+      (isPlainObject &&
+        Object.keys(value as Record<string, unknown>).length === 0);
 
     if (isEmpty) {
       emptyFields.push(key);

@@ -1,4 +1,5 @@
 import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { User } from 'src/users/entities/user.entity';
 
 @ObjectType()
 export class Class {
@@ -16,4 +17,16 @@ export class Class {
 
   @Field(() => Date, { description: 'Class Updated At' })
   updatedAt: Date;
+
+  @Field(() => [User], {
+    description: 'Teachers in this class',
+    nullable: true,
+  })
+  teachers?: User[];
+
+  @Field(() => [User], {
+    description: 'Students in this class',
+    nullable: true,
+  })
+  students?: User[];
 }

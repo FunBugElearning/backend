@@ -1,7 +1,6 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { AuthSessionsService } from './auth_sessions.service';
 import { AuthSession } from './entities/auth_session.entity';
-import { CreateAuthSessionInput } from './dto/create-auth_session.input';
 import { UpdateAuthSessionInput } from './dto/update-auth_session.input';
 
 @Resolver(() => AuthSession)
@@ -9,11 +8,8 @@ export class AuthSessionsResolver {
   constructor(private readonly authSessionsService: AuthSessionsService) {}
 
   @Mutation(() => AuthSession)
-  createAuthSession(
-    @Args('createAuthSessionInput')
-    createAuthSessionInput: CreateAuthSessionInput,
-  ) {
-    return this.authSessionsService.create(createAuthSessionInput);
+  createAuthSession() {
+    return this.authSessionsService.create();
   }
 
   @Query(() => [AuthSession], { name: 'authSessions' })
@@ -31,10 +27,7 @@ export class AuthSessionsResolver {
     @Args('updateAuthSessionInput')
     updateAuthSessionInput: UpdateAuthSessionInput,
   ) {
-    return this.authSessionsService.update(
-      updateAuthSessionInput.id,
-      updateAuthSessionInput,
-    );
+    return this.authSessionsService.update(updateAuthSessionInput.id);
   }
 
   @Mutation(() => AuthSession)

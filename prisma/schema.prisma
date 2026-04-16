@@ -19,6 +19,9 @@ model User {
   updatedAt    DateTime      @updatedAt
   authSessions AuthSession[]
   authAuditLogs AuthAuditLog[]
+  classesAsTeacher  Class[]   @relation("ClassTeachers")
+  classesAsStudent  Class[]   @relation("ClassStudents")
+
   role         Role          @relation(fields: [role_id], references: [id])
 
   @@index([role_id])
@@ -62,4 +65,16 @@ model AuthAuditLog {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+}
+
+model Class {
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Relations
+  teachers     User[]    @relation("ClassTeachers")
+  students     User[]    @relation("ClassStudents")
 }

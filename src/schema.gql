@@ -160,6 +160,12 @@ type Class {
 
   """Class Updated At"""
   updatedAt: DateTime!
+
+  """Teachers in this class"""
+  teachers: [User!]
+
+  """Students in this class"""
+  students: [User!]
 }
 
 type Query {
@@ -181,7 +187,7 @@ type Mutation {
   removeUser(id: Int!): User!
   loginAuth(loginAuthInput: LoginAuthInput!): Auth!
   registerAuth(registerAuthInput: RegisterAuthInput!): Auth!
-  createAuthSession(createAuthSessionInput: CreateAuthSessionInput!): AuthSession!
+  createAuthSession: AuthSession!
   updateAuthSession(updateAuthSessionInput: UpdateAuthSessionInput!): AuthSession!
   removeAuthSession(id: Int!): AuthSession!
   createAuthAuditLog(createAuthAuditLogInput: CreateAuthAuditLogInput!): AuthAuditLog!
@@ -270,38 +276,6 @@ input RegisterAuthInput {
   phoneNumber: String
 }
 
-input CreateAuthSessionInput {
-  """User Id"""
-  user_id: Int!
-
-  """Hash of refresh token"""
-  refresh_toke_hash: String!
-
-  """Name of browser"""
-  browser_agent: String!
-
-  """Ip address"""
-  ip_address: String!
-
-  """Date when session will be expired"""
-  expired_at: DateTime!
-
-  """Date when session was rotated"""
-  rotated_at: DateTime!
-
-  """Date when session was revoked"""
-  revoked_at: DateTime
-
-  """Date when session was created"""
-  created_at: DateTime!
-
-  """Family Id"""
-  family_id: String!
-
-  """JWT ID"""
-  jti: String!
-}
-
 input UpdateAuthSessionInput {
   """User Id"""
   user_id: Int
@@ -347,13 +321,31 @@ input UpdateAuthAuditLogInput {
 }
 
 input CreateClassInput {
-  """Example field (placeholder)"""
-  exampleField: Int!
+  """Class Name"""
+  name: String!
+
+  """Class Description"""
+  description: String
+
+  """Teacher IDs"""
+  teacherIds: [Int!]
+
+  """Student IDs"""
+  studentIds: [Int!]
 }
 
 input UpdateClassInput {
-  """Example field (placeholder)"""
-  exampleField: Int
+  """Class Name"""
+  name: String
+
+  """Class Description"""
+  description: String
+
+  """Teacher IDs"""
+  teacherIds: [Int!]
+
+  """Student IDs"""
+  studentIds: [Int!]
   id: Int!
 }
 

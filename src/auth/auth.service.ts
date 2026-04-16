@@ -53,13 +53,13 @@ export class AuthService {
         };
       }
 
-      const accessToken = await signAccessToken({
+      const accessToken = signAccessToken({
         userId: user.id,
         name: user.name,
         email: user.email,
       });
 
-      const refreshToken = await signRefreshToken({
+      const refreshToken = signRefreshToken({
         userId: user.id,
         name: user.name,
         email: user.email,
@@ -95,7 +95,9 @@ export class AuthService {
         refreshToken,
       };
     } catch (error) {
-      logger.error('Login failed', { error });
+      logger.error('Login failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       return {
         success: false,
@@ -152,13 +154,13 @@ export class AuthService {
         include: { role: true },
       });
 
-      const accessToken = await signAccessToken({
+      const accessToken = signAccessToken({
         userId: user.id,
         name: user.name,
         email: user.email,
       });
 
-      const refreshToken = await signRefreshToken({
+      const refreshToken = signRefreshToken({
         userId: user.id,
         name: user.name,
         email: user.email,
@@ -194,7 +196,9 @@ export class AuthService {
         refreshToken,
       };
     } catch (error) {
-      logger.error('Register failed', { error });
+      logger.error('Register failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       return {
         success: false,

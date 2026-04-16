@@ -2,48 +2,42 @@
 
 High-signal notes for coding agents in `backend/server`.
 
-## Repo shape
+## Architecture
 
 - Single NestJS app (not a monorepo). Entrypoint: `src/main.ts`; module wiring: `src/app.module.ts`.
-- API is GraphQL via Apollo at `/graphql`; decorator schema output is `src/schema.gql`.
-- `AppModule` loads `UsersModule`, `AuthModule`, `AuthSessionsModule`, and `AuthAuditLogsModule`.
-- Existing GraphQL/API names keep snake_case fields and legacy typos like `refresh_toke_hash`; preserve them unless doing an explicit breaking change.
+- GraphQL API via Apollo at `/graphql`; schema output: `src/schema.gql`.
+- `PrismaService` is the only Prisma client entrypoint - never create `new PrismaClient()` in feature code.
 
 ## Commands
 
-- Use `pnpm` only.
-- Install deps: `pnpm install` (use `--frozen-lockfile` for reproducible CI-style installs).
-- Dev server: `pnpm run start:dev`.
-- Build: `pnpm run build`.
-- Lint (auto-fix): `pnpm run lint`.
-- Format: `pnpm run format`.
-- Unit tests: `pnpm run test`.
-- E2E tests: `pnpm run test:e2e`.
-- Typecheck (no script exists): `pnpm exec tsc --noEmit`.
+- Use `pnpm` only (not npm/yarn).
+- Install: `pnpm install --frozen-lockfile`
+- Dev: `pnpm run start:dev`
+- Build: `pnpm run build`
+- Lint: `pnpm run lint` (auto-fix enabled)
+- Format: `pnpm run format`
+- Typecheck: `pnpm exec tsc --noEmit`
 
-## Focused verification
+## Testing
 
-- Single unit file: `pnpm run test -- src/<feature>/<file>.spec.ts`.
-- Deterministic unit path: `pnpm run test -- --runTestsByPath src/<feature>/<file>.spec.ts`.
-- Single e2e file: `pnpm run test:e2e -- test/<file>.e2e-spec.ts`.
-- Deterministic e2e path: `pnpm run test:e2e -- --runTestsByPath test/<file>.e2e-spec.ts`.
-- By test name: `pnpm run test -- -t "<name>"` or `pnpm run test:e2e -- -t "<name>"`.
+- Unit: `pnpm run test` or `pnpm run test -- src/feature/file.spec.ts`
+- E2E: `pnpm run test:e2e` or `pnpm run test:e2e -- test/file.e2e-spec.ts`
+- By name: `pnpm run test -- -t "test name"` or `pnpm run test:e2e -- -t "test name"`
 
-## Prisma and env gotchas
+## Prisma gotchas
 
-- `PrismaService` (`src/prisma/prisma.service.ts`) is the only Prisma client entrypoint; do not create `new PrismaClient()` in feature code.
-- `PrismaService` calls `process.loadEnvFile()` and throws if `DATABASE_URL` is still missing.
-- Prisma datasource URL lives in `prisma.config.ts` (not in `prisma/schema.prisma`).
-- After editing `prisma/schema.prisma`, run `pnpm exec prisma generate`; if model shape changed, run/apply a migration before runtime testing.
-- Auth token helpers require `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET` (expiration vars are optional).
+- `PrismaService` auto-loads `.env` and throws if `DATABASE_URL` missing
+- After schema changes: `pnpm exec prisma generate` + migrate if models changed
+- Import from `@prisma/client`, NOT `src/generated/prisma`
+- Datasource URL in environment (not schema file)
 
-## Test quirks that cause false failures
+## GraphQL conventions
 
-- Neither Jest config (`package.json` unit config nor `test/jest-e2e.json`) defines `moduleNameMapper` for `src/*`.
-- Absolute imports like `from 'src/helper/logger'` fail in tests/e2e (`Cannot find module ...`) even if app build succeeds.
-- `test/app.e2e-spec.ts` overrides `PrismaService`, so DB is not the first blocker; import resolution is.
+- Preserve existing snake_case field names and typos like `refresh_toke_hash`
+- Apollo Server context: `({ req }: { req: Request }) => ({ req })`
 
-## Generated / build artifacts
+## Test quirks
 
-- Do not hand-edit `src/schema.gql`, `src/generated/prisma/**`, or `dist/**`.
-- For Prisma usage in app code, import from `@prisma/client` (not `src/generated/prisma`).
+- Jest configs lack `moduleNameMapper` for `src/*`
+- Absolute imports fail in e2e tests despite working in build
+- `test/app.e2e-spec.ts` mocks `PrismaService` - import resolution is the real blocker

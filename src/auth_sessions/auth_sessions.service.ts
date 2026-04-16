@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthSessionInput } from './dto/create-auth_session.input';
-import { UpdateAuthSessionInput } from './dto/update-auth_session.input';
 
 @Injectable()
 export class AuthSessionsService {
-  create(createAuthSessionInput: CreateAuthSessionInput) {
+  create() {
     return 'This action adds a new authSession';
   }
 
@@ -16,7 +14,7 @@ export class AuthSessionsService {
     return `This action returns a #${id} authSession`;
   }
 
-  update(id: number, updateAuthSessionInput: UpdateAuthSessionInput) {
+  update(id: number) {
     return `This action updates a #${id} authSession`;
   }
 
