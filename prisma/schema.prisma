@@ -7,29 +7,42 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  name         String
-  email        String        @unique
-  password     String
-  dateOfBirth  DateTime?
-  address      String?
-  phoneNumber  String?
-  role_id      Int
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  authSessions AuthSession[]
-  authAuditLogs AuthAuditLog[]
-  classesAsTeacher  Class[]   @relation("ClassTeachers")
-  classesAsStudent  Class[]   @relation("ClassStudents")
-
-  role         Role          @relation(fields: [role_id], references: [id])
+  id                      Int                  @id @default(autoincrement())
+  name                    String
+  email                   String               @unique
+  password                String
+  dateOfBirth             DateTime?
+  address                 String?
+  phoneNumber             String?
+  role_id                 Int
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  authSessions            AuthSession[]
+  authAuditLogs           AuthAuditLog[]
+  classesAsTeacher        Class[]              @relation("ClassTeachers")
+  classesAsStudent        Class[]              @relation("ClassStudents")
+  attendances             Attendance[]
+  assignmentsCreated      Assignment[]
+  submissions             Submission[]
+  gradeItemsCreated       GradeItem[]          @relation("GradeItemCreator")
+  studentGrades           StudentGrade[]       @relation("StudentGradeStudent")
+  gradesGiven             StudentGrade[]       @relation("StudentGradeGrader")
+  conversationsCreated    Conversation[]       @relation("ConversationCreator")
+  conversationMemberships ConversationMember[]
+  messagesSent            Message[]
+  learningReports         LearningReport[]     @relation("LearningReportStudent")
+  reportsGenerated        LearningReport[]     @relation("LearningReportGenerator")
+  notificationsReceived   Notification[]       @relation("NotificationRecipient")
+  notificationsCreated    Notification[]       @relation("NotificationCreator")
+  filesUploaded           FileAsset[]
+  role                    Role                 @relation(fields: [role_id], references: [id])
 
   @@index([role_id])
 }
 
 model Role {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -37,7 +50,7 @@ model Role {
 }
 
 model AuthSession {
-  id                Int      @id @default(autoincrement())
+  id                Int       @id @default(autoincrement())
   user_id           Int
   refresh_toke_hash String
   browser_agent     String
@@ -45,9 +58,9 @@ model AuthSession {
   expired_at        DateTime
   rotated_at        DateTime
   revoked_at        DateTime?
-  created_at        DateTime @default(now())
+  created_at        DateTime  @default(now())
   family_id         String
-  jti               String   @unique
+  jti               String    @unique
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -55,12 +68,12 @@ model AuthSession {
 }
 
 model AuthAuditLog {
-  id           Int      @id @default(autoincrement())
-  user_id      Int
-  event_type   String
-  ip_address   String
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  event_type    String
+  ip_address    String
   browser_agent String
-  created_at   DateTime @default(now())
+  created_at    DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -68,13 +81,361 @@ model AuthAuditLog {
 }
 
 model Class {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teachers        User[]           @relation("ClassTeachers")
+  students        User[]           @relation("ClassStudents")
+  sections        Section[]
+  sessions        ClassSession[]
+  gradeItems      GradeItem[]
+  learningReports LearningReport[]
+}
+
+model Section {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  position    Int      @default(0)
+  class_id    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  class       Class        @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  assignments Assignment[]
+
+  @@index([class_id])
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  content     String?
+  position    Int      @default(0)
+  section_id  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  section  Section        @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  sessions ClassSession[]
+
+  @@index([section_id])
+}
+
+model ClassSession {
+  id          Int       @id @default(autoincrement())
+  class_id    Int
+  lesson_id   Int?
+  sessionDate DateTime
+  startTime   DateTime?
+  endTime     DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  class       Class        @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  lesson      Lesson?      @relation(fields: [lesson_id], references: [id], onDelete: SetNull)
+  attendances Attendance[]
+
+  @@index([class_id])
+  @@index([lesson_id])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT_EXCUSED
+  ABSENT_UNEXCUSED
+  LATE
+}
+
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  session_id Int
+  student_id Int
+  status     AttendanceStatus @default(PRESENT)
+  note       String?
+  checkedAt  DateTime         @default(now())
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  session ClassSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  student User         @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([session_id, student_id])
+  @@index([session_id])
+  @@index([student_id])
+}
+
+model Assignment {
   id           Int       @id @default(autoincrement())
-  name         String
+  section_id   Int
+  created_by   Int
+  title        String
   description  String?
+  instructions String?
+  dueDate      DateTime?
+  maxScore     Float     @default(100)
+  isPublished  Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  
-  // Relations
-  teachers     User[]    @relation("ClassTeachers")
-  students     User[]    @relation("ClassStudents")
+
+  section     Section                @relation(fields: [section_id], references: [id], onDelete: Cascade)
+  creator     User                   @relation(fields: [created_by], references: [id], onDelete: Restrict)
+  submissions Submission[]
+  attachments AssignmentAttachment[]
+
+  @@index([section_id])
+  @@index([created_by])
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  LATE
+  GRADED
+  RETURNED
+}
+
+model Submission {
+  id              Int              @id @default(autoincrement())
+  assignment_id   Int
+  student_id      Int
+  content         String?
+  fileUrl         String?
+  status          SubmissionStatus @default(DRAFT)
+  submittedAt     DateTime?
+  score           Float?
+  teacherFeedback String?
+  gradedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  assignment      Assignment             @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  student         User                   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  attachments     SubmissionAttachment[]
+  autoGradeResult AutoGradeResult?
+
+  @@unique([assignment_id, student_id])
+  @@index([assignment_id])
+  @@index([student_id])
+}
+
+model GradeItem {
+  id          Int       @id @default(autoincrement())
+  class_id    Int
+  created_by  Int
+  name        String
+  description String?
+  maxScore    Float     @default(100)
+  weight      Float?
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  class         Class          @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  creator       User           @relation("GradeItemCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  studentGrades StudentGrade[]
+
+  @@index([class_id])
+  @@index([created_by])
+}
+
+model StudentGrade {
+  id            Int       @id @default(autoincrement())
+  grade_item_id Int
+  student_id    Int
+  graded_by     Int?
+  score         Float?
+  feedback      String?
+  gradedAt      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  gradeItem GradeItem @relation(fields: [grade_item_id], references: [id], onDelete: Cascade)
+  student   User      @relation("StudentGradeStudent", fields: [student_id], references: [id], onDelete: Cascade)
+  grader    User?     @relation("StudentGradeGrader", fields: [graded_by], references: [id], onDelete: SetNull)
+
+  @@unique([grade_item_id, student_id])
+  @@index([grade_item_id])
+  @@index([student_id])
+  @@index([graded_by])
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+model Conversation {
+  id         Int              @id @default(autoincrement())
+  type       ConversationType
+  name       String?
+  created_by Int
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  creator  User                 @relation("ConversationCreator", fields: [created_by], references: [id], onDelete: Cascade)
+  members  ConversationMember[]
+  messages Message[]
+
+  @@index([created_by])
+}
+
+model ConversationMember {
+  id              Int       @id @default(autoincrement())
+  conversation_id Int
+  user_id         Int
+  joinedAt        DateTime  @default(now())
+  leftAt          DateTime?
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversation_id, user_id])
+  @@index([conversation_id])
+  @@index([user_id])
+}
+
+model Message {
+  id              Int       @id @default(autoincrement())
+  conversation_id Int
+  sender_id       Int
+  content         String
+  sentAt          DateTime  @default(now())
+  editedAt        DateTime?
+  deletedAt       DateTime?
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [sender_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id])
+  @@index([sender_id])
+  @@index([sentAt])
+}
+
+model LearningReport {
+  id                   Int      @id @default(autoincrement())
+  class_id             Int
+  student_id           Int
+  generated_by         Int?
+  periodStart          DateTime
+  periodEnd            DateTime
+  summary              String?
+  totalSessions        Int      @default(0)
+  presentCount         Int      @default(0)
+  absentExcusedCount   Int      @default(0)
+  absentUnexcusedCount Int      @default(0)
+  lateCount            Int      @default(0)
+  averageScore         Float?
+  reportData           Json?
+  generatedAt          DateTime @default(now())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  class     Class @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  student   User  @relation("LearningReportStudent", fields: [student_id], references: [id], onDelete: Cascade)
+  generator User? @relation("LearningReportGenerator", fields: [generated_by], references: [id], onDelete: SetNull)
+
+  @@unique([class_id, student_id, periodStart, periodEnd])
+  @@index([class_id])
+  @@index([student_id])
+  @@index([generated_by])
+}
+
+enum NotificationType {
+  SYSTEM
+  ASSIGNMENT
+  GRADE
+  ATTENDANCE
+  REPORT
+  MESSAGE
+}
+
+model Notification {
+  id           Int              @id @default(autoincrement())
+  recipient_id Int
+  created_by   Int?
+  type         NotificationType
+  title        String
+  message      String
+  isRead       Boolean          @default(false)
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  recipient User  @relation("NotificationRecipient", fields: [recipient_id], references: [id], onDelete: Cascade)
+  creator   User? @relation("NotificationCreator", fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@index([recipient_id])
+  @@index([created_by])
+  @@index([isRead])
+}
+
+model FileAsset {
+  id           Int      @id @default(autoincrement())
+  uploaded_by  Int
+  originalName String
+  mimeType     String
+  size         Int
+  bucket       String
+  objectKey    String   @unique
+  url          String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  uploader              User                   @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
+  assignmentAttachments AssignmentAttachment[]
+  submissionAttachments SubmissionAttachment[]
+
+  @@index([uploaded_by])
+}
+
+model AssignmentAttachment {
+  id            Int      @id @default(autoincrement())
+  assignment_id Int
+  file_id       Int
+  createdAt     DateTime @default(now())
+
+  assignment Assignment @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  file       FileAsset  @relation(fields: [file_id], references: [id], onDelete: Cascade)
+
+  @@unique([assignment_id, file_id])
+  @@index([assignment_id])
+  @@index([file_id])
+}
+
+model SubmissionAttachment {
+  id            Int      @id @default(autoincrement())
+  submission_id Int
+  file_id       Int
+  createdAt     DateTime @default(now())
+
+  submission Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+  file       FileAsset  @relation(fields: [file_id], references: [id], onDelete: Cascade)
+
+  @@unique([submission_id, file_id])
+  @@index([submission_id])
+  @@index([file_id])
+}
+
+model AutoGradeResult {
+  id                Int      @id @default(autoincrement())
+  submission_id     Int      @unique
+  suggestedScore    Float?
+  suggestedFeedback String?
+  confidence        Float?
+  modelName         String?
+  rawResponse       Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  submission Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+
+  @@index([submission_id])
 }
