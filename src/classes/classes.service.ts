@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateClassInput } from './dto/create-class.input';
 import { UpdateClassInput } from './dto/update-class.input';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -46,6 +46,42 @@ export class ClassesService {
       },
     });
   }
+
+  async findByUserId(userId: number) {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new NotFoundException('User is not found');
+  }
+
+  return this.prisma.class.findMany({
+    where: {
+      OR: [
+        {
+          teachers: {
+            some: {
+              id: userId,
+            },
+          },
+        },
+        {
+          students: {
+            some: {
+              id: userId,
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      teachers: true,
+      students: true,
+    },
+  });
+}
 
   update(id: number, updateClassInput: UpdateClassInput) {
     const { name, description, teacherIds, studentIds } = updateClassInput;

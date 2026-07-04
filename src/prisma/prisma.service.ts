@@ -1,14 +1,12 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  private readonly pool: Pool;
 
   constructor() {
     if (!process.env.DATABASE_URL) {
@@ -25,12 +23,11 @@ export class PrismaService
       throw new Error('DATABASE_URL is not set');
     }
 
-    const pool = new Pool({ connectionString });
-    super({
-      adapter: new PrismaPg(pool),
-    });
+    const adapter = new PrismaPg({
+  connectionString,
+});
 
-    this.pool = pool;
+super({ adapter });
   }
 
   async onModuleInit(): Promise<void> {
@@ -39,6 +36,5 @@ export class PrismaService
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
-    await this.pool.end();
   }
 }

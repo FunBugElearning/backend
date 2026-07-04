@@ -6,7 +6,10 @@ import { UpdateClassInput } from './dto/update-class.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ForbiddenException } from '@nestjs/common/exceptions/forbidden.exception';
 import { UnauthorizedException } from '@nestjs/common/exceptions/unauthorized.exception';
-import { verifyAdminTeacherRole } from 'src/middleware/role-authorization.middleware';
+import {
+  verifyAdminTeacherRole,
+  verifyAuthenticatedUser,
+} from 'src/middleware/role-authorization.middleware';
 import type { Request } from 'express';
 
 @Resolver(() => Class)
@@ -30,6 +33,27 @@ export class ClassesResolver {
     throw new ForbiddenException(validation.message);
   }
 
+  private async assertCanViewUserClasses(
+  req: Request,
+  targetUserId: number,
+): Promise<void> {
+  const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+  if (!validation.ok) {
+    throw new UnauthorizedException(validation.message);
+  }
+
+  const role = validation.role.toLowerCase();
+  const isAdmin = role === 'admin';
+  const isViewingOwnClasses = validation.userId === targetUserId;
+
+  if (!isAdmin && !isViewingOwnClasses) {
+    throw new ForbiddenException(
+      'You do not have permission to view this user classes',
+    );
+  }
+}
+
   @Mutation(() => Class)
   async createClass(
     @Args('createClassInput') createClassInput: CreateClassInput,
@@ -43,6 +67,16 @@ export class ClassesResolver {
   findAll() {
     return this.classesService.findAll();
   }
+
+  @Query(() => [Class], { name: 'classesByUserId' })
+async findByUserId(
+  @Args('userId', { type: () => Int }) userId: number,
+  @Context('req') req: Request,
+) {
+  await this.assertCanViewUserClasses(req, userId);
+
+  return this.classesService.findByUserId(userId);
+}
 
   @Query(() => Class, { name: 'class' })
   findOne(@Args('id', { type: () => Int }) id: number) {

@@ -7,29 +7,29 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  name         String
-  email        String        @unique
-  password     String
-  dateOfBirth  DateTime?
-  address      String?
-  phoneNumber  String?
-  role_id      Int
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  authSessions AuthSession[]
-  authAuditLogs AuthAuditLog[]
-  classesAsTeacher  Class[]   @relation("ClassTeachers")
-  classesAsStudent  Class[]   @relation("ClassStudents")
+  id               Int            @id @default(autoincrement())
+  name             String
+  email            String         @unique
+  password         String
+  dateOfBirth      DateTime?
+  address          String?
+  phoneNumber      String?
+  role_id          Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  authSessions     AuthSession[]
+  authAuditLogs    AuthAuditLog[]
+  classesAsTeacher Class[]        @relation("ClassTeachers")
+  classesAsStudent Class[]        @relation("ClassStudents")
 
-  role         Role          @relation(fields: [role_id], references: [id])
+  role Role @relation(fields: [role_id], references: [id])
 
   @@index([role_id])
 }
 
 model Role {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -37,7 +37,7 @@ model Role {
 }
 
 model AuthSession {
-  id                Int      @id @default(autoincrement())
+  id                Int       @id @default(autoincrement())
   user_id           Int
   refresh_toke_hash String
   browser_agent     String
@@ -45,9 +45,9 @@ model AuthSession {
   expired_at        DateTime
   rotated_at        DateTime
   revoked_at        DateTime?
-  created_at        DateTime @default(now())
+  created_at        DateTime  @default(now())
   family_id         String
-  jti               String   @unique
+  jti               String    @unique
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -55,12 +55,12 @@ model AuthSession {
 }
 
 model AuthAuditLog {
-  id           Int      @id @default(autoincrement())
-  user_id      Int
-  event_type   String
-  ip_address   String
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  event_type    String
+  ip_address    String
   browser_agent String
-  created_at   DateTime @default(now())
+  created_at    DateTime @default(now())
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -68,13 +68,30 @@ model AuthAuditLog {
 }
 
 model Class {
-  id           Int       @id @default(autoincrement())
-  name         String
-  description  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relations
-  teachers     User[]    @relation("ClassTeachers")
-  students     User[]    @relation("ClassStudents")
+  teachers    User[]       @relation("ClassTeachers")
+  students    User[]       @relation("ClassStudents")
+  assignments Assignment[]
+}
+
+model Assignment {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  deadline    DateTime
+  topic       String?
+  attachFiles String[] @default([])
+  classId     Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@index([classId])
 }

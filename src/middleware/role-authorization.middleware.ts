@@ -161,3 +161,81 @@ export async function verifyAdminTeacherRole(
     userId: user.id,
   };
 }
+
+type AuthenticatedUserResult =
+  | {
+      ok: true;
+      userId: number;
+      role: string;
+    }
+  | {
+      ok: false;
+      status: 'unauthorized';
+      message: string;
+    };
+
+export async function verifyAuthenticatedUser(
+  req: Request,
+  prisma: PrismaService,
+): Promise<AuthenticatedUserResult> {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      ok: false,
+      status: 'unauthorized',
+      message: 'Missing or invalid authorization header',
+    };
+  }
+
+  const token = authHeader.slice('Bearer '.length).trim();
+
+  if (!token) {
+    return {
+      ok: false,
+      status: 'unauthorized',
+      message: 'Access token is missing',
+    };
+  }
+
+  let payload: { userId?: unknown };
+
+  try {
+    payload = verifyAccessToken(token) as { userId?: unknown };
+  } catch {
+    return {
+      ok: false,
+      status: 'unauthorized',
+      message: 'Invalid access token',
+    };
+  }
+
+  const userId = Number(payload.userId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return {
+      ok: false,
+      status: 'unauthorized',
+      message: 'Access token payload is invalid',
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { role: true },
+  });
+
+  if (!user) {
+    return {
+      ok: false,
+      status: 'unauthorized',
+      message: 'User is not found',
+    };
+  }
+
+  return {
+    ok: true,
+    userId: user.id,
+    role: user.role.name,
+  };
+}
