@@ -1,29 +1,46 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateClassInput } from './dto/create-class.input';
 import { UpdateClassInput } from './dto/update-class.input';
-import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ClassesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createClassInput: CreateClassInput) {
-    const { name, description, teacherIds, studentIds } = createClassInput;
+  create(
+    createClassInput: CreateClassInput,
+    createdById: number,
+  ) {
+    const {
+      name,
+      description,
+      teacherIds,
+      studentIds,
+    } = createClassInput;
 
     return this.prisma.class.create({
       data: {
         name,
         description,
+        createdById,
         teachers: {
-          connect: teacherIds?.map((id) => ({ id })) || [],
+          connect:
+            teacherIds?.map((id) => ({ id })) ?? [],
         },
         students: {
-          connect: studentIds?.map((id) => ({ id })) || [],
+          connect:
+            studentIds?.map((id) => ({ id })) ?? [],
         },
       },
       include: {
         teachers: true,
         students: true,
+        createdBy: true,
       },
     });
   }
@@ -33,85 +50,502 @@ export class ClassesService {
       include: {
         teachers: true,
         students: true,
+        createdBy: true,
       },
     });
   }
 
   findOne(id: number) {
     return this.prisma.class.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
       include: {
         teachers: true,
         students: true,
+        createdBy: true,
       },
     });
   }
 
   async findByUserId(userId: number) {
-  const user = await this.prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-  if (!user) {
-    throw new NotFoundException('User is not found');
+    if (!user) {
+      throw new NotFoundException(
+        'User is not found',
+      );
+    }
+
+    return this.prisma.class.findMany({
+      where: {
+        OR: [
+          {
+            teachers: {
+              some: {
+                id: userId,
+              },
+            },
+          },
+          {
+            students: {
+              some: {
+                id: userId,
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        teachers: true,
+        students: true,
+        createdBy: true,
+      },
+    });
   }
 
-  return this.prisma.class.findMany({
-    where: {
-      OR: [
-        {
-          teachers: {
-            some: {
-              id: userId,
-            },
-          },
-        },
-        {
-          students: {
-            some: {
-              id: userId,
-            },
-          },
-        },
-      ],
-    },
-    include: {
-      teachers: true,
-      students: true,
-    },
-  });
-}
-
-  update(id: number, updateClassInput: UpdateClassInput) {
-    const { name, description, teacherIds, studentIds } = updateClassInput;
+  update(
+    id: number,
+    updateClassInput: UpdateClassInput,
+  ) {
+    const {
+      name,
+      description,
+      teacherIds,
+      studentIds,
+    } = updateClassInput;
 
     return this.prisma.class.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
+        ...(name !== undefined && {
+          name,
+        }),
+
+        ...(description !== undefined && {
+          description,
+        }),
+
         ...(teacherIds !== undefined && {
           teachers: {
-            set: teacherIds?.map((id) => ({ id })) || [],
+            set: teacherIds.map((teacherId) => ({
+              id: teacherId,
+            })),
           },
         }),
+
         ...(studentIds !== undefined && {
           students: {
-            set: studentIds?.map((id) => ({ id })) || [],
+            set: studentIds.map((studentId) => ({
+              id: studentId,
+            })),
           },
         }),
       },
       include: {
         teachers: true,
         students: true,
+        createdBy: true,
       },
     });
   }
 
   remove(id: number) {
     return this.prisma.class.delete({
-      where: { id },
+      where: {
+        id,
+      },
+      include: {
+        teachers: true,
+        students: true,
+        createdBy: true,
+      },
     });
   }
+
+  async assignClassesToTeacher(
+    teacherId: number,
+    classIds: number[],
+  ) {
+    const uniqueClassIds = [...new Set(classIds)];
+
+    if (uniqueClassIds.length === 0) {
+      throw new BadRequestException(
+        'At least one class ID is required',
+      );
+    }
+
+    const teacher =
+      await this.prisma.user.findUnique({
+        where: {
+          id: teacherId,
+        },
+        include: {
+          role: true,
+        },
+      });
+
+    if (!teacher) {
+      throw new NotFoundException(
+        'Teacher is not found',
+      );
+    }
+
+    if (
+      teacher.role.name.toLowerCase() !==
+      'teacher'
+    ) {
+      throw new BadRequestException(
+        'Selected user does not have teacher role',
+      );
+    }
+
+    const existingClasses =
+      await this.prisma.class.findMany({
+        where: {
+          id: {
+            in: uniqueClassIds,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    const existingClassIds = new Set(
+      existingClasses.map(
+        (classItem) => classItem.id,
+      ),
+    );
+
+    const missingClassIds =
+      uniqueClassIds.filter(
+        (classId) =>
+          !existingClassIds.has(classId),
+      );
+
+    if (missingClassIds.length > 0) {
+      throw new NotFoundException(
+        `Classes are not found: ${missingClassIds.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    return this.prisma.$transaction(
+      uniqueClassIds.map((classId) =>
+        this.prisma.class.update({
+          where: {
+            id: classId,
+          },
+          data: {
+            teachers: {
+              connect: {
+                id: teacherId,
+              },
+            },
+          },
+          include: {
+            teachers: true,
+            students: true,
+            createdBy: true,
+          },
+        }),
+      ),
+    );
+  }
+
+  private async validateClassMembers(
+    classId: number,
+    userIds: number[],
+    expectedRole: 'teacher' | 'student',
+  ): Promise<number[]> {
+    const uniqueUserIds = [...new Set(userIds)];
+
+    if (uniqueUserIds.length === 0) {
+      throw new BadRequestException(
+        'At least one user ID is required',
+      );
+    }
+
+    const classItem =
+      await this.prisma.class.findUnique({
+        where: {
+          id: classId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!classItem) {
+      throw new NotFoundException(
+        'Class is not found',
+      );
+    }
+
+    const users =
+      await this.prisma.user.findMany({
+        where: {
+          id: {
+            in: uniqueUserIds,
+          },
+        },
+        include: {
+          role: true,
+        },
+      });
+
+    const existingUserIds = new Set(
+      users.map((user) => user.id),
+    );
+
+    const missingUserIds =
+      uniqueUserIds.filter(
+        (userId) =>
+          !existingUserIds.has(userId),
+      );
+
+    if (missingUserIds.length > 0) {
+      throw new NotFoundException(
+        `Users are not found: ${missingUserIds.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    const invalidUsers = users.filter(
+      (user) =>
+        user.role.name.toLowerCase() !==
+        expectedRole,
+    );
+
+    if (invalidUsers.length > 0) {
+      throw new BadRequestException(
+        `These users do not have ${expectedRole} role: ${invalidUsers
+          .map((user) => user.id)
+          .join(', ')}`,
+      );
+    }
+
+    return uniqueUserIds;
+  }
+
+  async addTeachersToClass(
+    classId: number,
+    teacherIds: number[],
+  ) {
+    const validTeacherIds =
+      await this.validateClassMembers(
+        classId,
+        teacherIds,
+        'teacher',
+      );
+
+    return this.prisma.class.update({
+      where: {
+        id: classId,
+      },
+      data: {
+        teachers: {
+          connect: validTeacherIds.map((id) => ({
+            id,
+          })),
+        },
+      },
+      include: {
+        teachers: true,
+        students: true,
+        createdBy: true,
+      },
+    });
+  }
+
+  async addStudentsToClass(
+    classId: number,
+    studentIds: number[],
+  ) {
+    const validStudentIds =
+      await this.validateClassMembers(
+        classId,
+        studentIds,
+        'student',
+      );
+
+    return this.prisma.class.update({
+      where: {
+        id: classId,
+      },
+      data: {
+        students: {
+          connect: validStudentIds.map((id) => ({
+            id,
+          })),
+        },
+      },
+      include: {
+        teachers: true,
+        students: true,
+        createdBy: true,
+      },
+    });
+  }
+
+  async removeTeachersFromClass(
+    classId: number,
+    teacherIds: number[],
+  ) {
+    const validTeacherIds =
+      await this.validateClassMembers(
+        classId,
+        teacherIds,
+        'teacher',
+      );
+
+    return this.prisma.class.update({
+      where: {
+        id: classId,
+      },
+      data: {
+        teachers: {
+          disconnect: validTeacherIds.map((id) => ({
+            id,
+          })),
+        },
+      },
+      include: {
+        teachers: true,
+        students: true,
+        createdBy: true,
+      },
+    });
+  }
+
+  async removeStudentsFromClass(
+    classId: number,
+    studentIds: number[],
+  ) {
+    const validStudentIds =
+      await this.validateClassMembers(
+        classId,
+        studentIds,
+        'student',
+      );
+
+    return this.prisma.class.update({
+      where: {
+        id: classId,
+      },
+      data: {
+        students: {
+          disconnect: validStudentIds.map((id) => ({
+            id,
+          })),
+        },
+      },
+      include: {
+        teachers: true,
+        students: true,
+        createdBy: true,
+      },
+    });
+  }
+    async getTeachersByClassId(classId: number) {
+    const classItem =
+      await this.prisma.class.findUnique({
+        where: {
+          id: classId,
+        },
+        select: {
+          teachers: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+    if (!classItem) {
+      throw new NotFoundException(
+        'Class is not found',
+      );
+    }
+
+    return classItem.teachers;
+  }
+
+  async getStudentsByClassId(classId: number) {
+    const classItem =
+      await this.prisma.class.findUnique({
+        where: {
+          id: classId,
+        },
+        select: {
+          students: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+    if (!classItem) {
+      throw new NotFoundException(
+        'Class is not found',
+      );
+    }
+
+    return classItem.students;
+  }
+  async searchStudents(keyword: string) {
+  const searchKeyword = keyword.trim();
+
+  if (!searchKeyword) {
+    throw new BadRequestException(
+      'Search keyword is required',
+    );
+  }
+
+  return this.prisma.user.findMany({
+    where: {
+      role: {
+        is: {
+          name: {
+            equals: 'student',
+            mode: 'insensitive',
+          },
+        },
+      },
+      OR: [
+        {
+          name: {
+            contains: searchKeyword,
+            mode: 'insensitive',
+          },
+        },
+        {
+          email: {
+            contains: searchKeyword,
+            mode: 'insensitive',
+          },
+        },
+      ],
+    },
+    include: {
+      role: true,
+    },
+    orderBy: {
+      name: 'asc',
+    },
+  });
+}
 }
