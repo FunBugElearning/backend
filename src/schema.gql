@@ -209,11 +209,16 @@ type Query {
   class(id: Int!): Class!
   teachersByClassId(classId: Int!): [User!]!
   studentsByClassId(classId: Int!): [User!]!
-  searchStudents(keyword: String!): [User!]!
+  searchStudents(input: SearchStudentsInput!): [User!]!
   roles: [Role!]!
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
+}
+
+input SearchStudentsInput {
+  name: String
+  email: String
 }
 
 type Mutation {
@@ -315,6 +320,9 @@ input RegisterAuthInput {
 
   """User Phonenumber"""
   phoneNumber: String
+
+  """User Role: admin, teacher, or student"""
+  role: String
 }
 
 input UpdateAuthSessionInput {

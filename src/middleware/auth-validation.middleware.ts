@@ -12,6 +12,7 @@ type RegisterInput = {
   dateOfBirth: Date | string;
   address?: string;
   phoneNumber?: string;
+  role?: string;
 };
 
 type LoginInput = {
@@ -42,6 +43,7 @@ type RegisterValidationResult =
         dateOfBirth: Date;
         address?: string;
         phoneNumber?: string;
+        role?: string;
       };
     }
   | {
@@ -52,10 +54,18 @@ type RegisterValidationResult =
 export function validateRegisterInput(
   payload: RegisterInput,
 ): RegisterValidationResult {
-  logger.info('Validating register input', { payload });
+  logger.info('Validating register input', {
+    payload: {
+      ...payload,
+      password: payload.password ? '***' : undefined,
+    },
+  });
+
   const name = payload.name?.trim();
   const email = payload.email?.trim().toLowerCase();
   const password = payload.password?.trim();
+  const role = payload.role?.trim().toLowerCase();
+
   const emptyFields = validateEmptyFields({
     name,
     email,
@@ -77,12 +87,22 @@ export function validateRegisterInput(
     };
   }
 
+  const allowedRoles = ['admin', 'teacher', 'student'];
+
+  if (role && !allowedRoles.includes(role)) {
+    return {
+      ok: false,
+      message: 'Role must be admin, teacher, or student',
+    };
+  }
+
   const dobValidation = validateDob(payload.dateOfBirth);
 
   if (!dobValidation.ok) {
     return {
       ok: false,
-      message: 'dateOfBirth is invalid. Use ISO date format (YYYY-MM-DD)',
+      message:
+        'dateOfBirth is invalid. Use ISO date format (YYYY-MM-DD)',
     };
   }
 
@@ -95,15 +115,28 @@ export function validateRegisterInput(
       dateOfBirth: dobValidation.value,
       address: payload.address?.trim() || undefined,
       phoneNumber: payload.phoneNumber?.trim() || undefined,
+      role,
     },
   };
 }
 
-export function validateLoginInput(payload: LoginInput): LoginValidationResult {
-  logger.info('Validating login input', { payload });
+export function validateLoginInput(
+  payload: LoginInput,
+): LoginValidationResult {
+  logger.info('Validating login input', {
+    payload: {
+      ...payload,
+      password: payload.password ? '***' : undefined,
+    },
+  });
+
   const email = payload.email?.trim().toLowerCase();
   const password = payload.password?.trim();
-  const emptyFields = validateEmptyFields({ email, password });
+
+  const emptyFields = validateEmptyFields({
+    email,
+    password,
+  });
 
   if (emptyFields.length > 0) {
     return {

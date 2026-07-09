@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateClassInput } from './dto/create-class.input';
 import { UpdateClassInput } from './dto/update-class.input';
+import { SearchStudentsInput } from './dto/search-students.input';
 
 @Injectable()
 export class ClassesService {
@@ -268,6 +270,7 @@ export class ClassesService {
     classId: number,
     userIds: number[],
     expectedRole: 'teacher' | 'student',
+    action: 'add' | 'remove',
   ): Promise<number[]> {
     const uniqueUserIds = [...new Set(userIds)];
 
@@ -284,6 +287,16 @@ export class ClassesService {
         },
         select: {
           id: true,
+          teachers: {
+            select: {
+              id: true,
+            },
+          },
+          students: {
+            select: {
+              id: true,
+            },
+          },
         },
       });
 
@@ -337,6 +350,47 @@ export class ClassesService {
       );
     }
 
+    const currentMemberIds = new Set(
+      expectedRole === 'teacher'
+        ? classItem.teachers.map(
+            (teacher) => teacher.id,
+          )
+        : classItem.students.map(
+            (student) => student.id,
+          ),
+    );
+
+    if (action === 'add') {
+      const duplicatedUserIds =
+        uniqueUserIds.filter((userId) =>
+          currentMemberIds.has(userId),
+        );
+
+      if (duplicatedUserIds.length > 0) {
+        throw new BadRequestException(
+          `These ${expectedRole}s already exist in class: ${duplicatedUserIds.join(
+            ', ',
+          )}`,
+        );
+      }
+    }
+
+    if (action === 'remove') {
+      const notInClassUserIds =
+        uniqueUserIds.filter(
+          (userId) =>
+            !currentMemberIds.has(userId),
+        );
+
+      if (notInClassUserIds.length > 0) {
+        throw new BadRequestException(
+          `These ${expectedRole}s are not in class: ${notInClassUserIds.join(
+            ', ',
+          )}`,
+        );
+      }
+    }
+
     return uniqueUserIds;
   }
 
@@ -349,6 +403,7 @@ export class ClassesService {
         classId,
         teacherIds,
         'teacher',
+        'add',
       );
 
     return this.prisma.class.update({
@@ -379,6 +434,7 @@ export class ClassesService {
         classId,
         studentIds,
         'student',
+        'add',
       );
 
     return this.prisma.class.update({
@@ -409,6 +465,7 @@ export class ClassesService {
         classId,
         teacherIds,
         'teacher',
+        'remove',
       );
 
     return this.prisma.class.update({
@@ -439,6 +496,7 @@ export class ClassesService {
         classId,
         studentIds,
         'student',
+        'remove',
       );
 
     return this.prisma.class.update({
@@ -459,7 +517,8 @@ export class ClassesService {
       },
     });
   }
-    async getTeachersByClassId(classId: number) {
+
+  async getTeachersByClassId(classId: number) {
     const classItem =
       await this.prisma.class.findUnique({
         where: {
@@ -506,46 +565,54 @@ export class ClassesService {
 
     return classItem.students;
   }
-  async searchStudents(keyword: string) {
-  const searchKeyword = keyword.trim();
 
-  if (!searchKeyword) {
-    throw new BadRequestException(
-      'Search keyword is required',
-    );
-  }
+    async searchStudents(input: SearchStudentsInput) {
+    const name = input.name?.trim();
+    const email = input.email?.trim();
 
-  return this.prisma.user.findMany({
-    where: {
-      role: {
-        is: {
-          name: {
-            equals: 'student',
-            mode: 'insensitive',
+    if (!name && !email) {
+      throw new BadRequestException(
+        'Name or email is required',
+      );
+    }
+
+    const searchConditions: Prisma.UserWhereInput[] = [];
+    if (name) {
+      searchConditions.push({
+        name: {
+          contains: name,
+          mode: 'insensitive' as const,
+        },
+      });
+    }
+
+    if (email) {
+      searchConditions.push({
+        email: {
+          contains: email,
+          mode: 'insensitive' as const,
+        },
+      });
+    }
+
+    return this.prisma.user.findMany({
+      where: {
+        role: {
+          is: {
+            name: {
+              equals: 'student',
+              mode: 'insensitive',
+            },
           },
         },
+        OR: searchConditions,
       },
-      OR: [
-        {
-          name: {
-            contains: searchKeyword,
-            mode: 'insensitive',
-          },
-        },
-        {
-          email: {
-            contains: searchKeyword,
-            mode: 'insensitive',
-          },
-        },
-      ],
-    },
-    include: {
-      role: true,
-    },
-    orderBy: {
-      name: 'asc',
-    },
-  });
-}
+      include: {
+        role: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+  }
 }

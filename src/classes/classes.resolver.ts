@@ -26,6 +26,7 @@ import {
   verifyAuthenticatedUser,
 } from 'src/middleware/role-authorization.middleware';
 import { User } from 'src/users/entities/user.entity';
+import { SearchStudentsInput } from './dto/search-students.input';
 
 @Resolver(() => Class)
 export class ClassesResolver {
@@ -510,23 +511,21 @@ async getStudentsByClassId(
     classId,
   );
 }
-/**
- * Admin hoặc Teacher tìm Student theo tên hoặc email.
- */
-@Query(() => [User], {
-  name: 'searchStudents',
-})
-async searchStudents(
-  @Args('keyword', {
-    type: () => String,
+  /**
+   * Admin hoặc Teacher tìm Student theo name hoặc email.
+   */
+  @Query(() => [User], {
+    name: 'searchStudents',
   })
-  keyword: string,
-  @Context('req') req: Request,
-) {
-  await this.assertAdminTeacher(req);
+  async searchStudents(
+    @Args('input')
+    input: SearchStudentsInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertAdminTeacher(req);
 
-  return this.classesService.searchStudents(
-    keyword,
-  );
-}
+    return this.classesService.searchStudents(
+      input,
+    );
+  }
 }

@@ -1,11 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
+
 import { LoginAuthInput } from './dto/login-auth.input';
 import { RegisterAuthInput } from './dto/register-auth.input';
 import { logger } from 'src/helper/logger';
-import { comparePassword, hashPassword } from 'src/utils/password.utils';
+import {
+  comparePassword,
+  hashPassword,
+} from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { signAccessToken, signRefreshToken } from 'src/utils/jwt_session.utils';
+import {
+  signAccessToken,
+  signRefreshToken,
+} from 'src/utils/jwt_session.utils';
 import {
   validateLoginInput,
   validateRegisterInput,
@@ -21,7 +31,8 @@ export class AuthService {
     sessionMetadata: SessionMetadata,
   ) {
     try {
-      const validation = validateLoginInput(loginAuthInput);
+      const validation =
+        validateLoginInput(loginAuthInput);
 
       if (!validation.ok) {
         return {
@@ -30,12 +41,18 @@ export class AuthService {
         };
       }
 
-      const { email, password } = validation.data;
+      const { email, password } =
+        validation.data;
 
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-        include: { role: true },
-      });
+      const user =
+        await this.prisma.user.findUnique({
+          where: {
+            email,
+          },
+          include: {
+            role: true,
+          },
+        });
 
       if (!user) {
         return {
@@ -44,7 +61,11 @@ export class AuthService {
         };
       }
 
-      const isPasswordValid = await comparePassword(password, user?.password);
+      const isPasswordValid =
+        await comparePassword(
+          password,
+          user.password,
+        );
 
       if (!isPasswordValid) {
         return {
@@ -65,19 +86,30 @@ export class AuthService {
         email: user.email,
       });
 
-      const hashedRefreshToken = await hashPassword(refreshToken);
+      const hashedRefreshToken =
+        await hashPassword(refreshToken);
+
       const now = new Date();
-      const sessionTtlMs = this.parseDurationToMs(
-        process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
+
+      const sessionTtlMs =
+        this.parseDurationToMs(
+          process.env.REFRESH_TOKEN_EXPIRATION ??
+            '30d',
+        );
+
+      const expiredAt = new Date(
+        now.getTime() + sessionTtlMs,
       );
-      const expiredAt = new Date(now.getTime() + sessionTtlMs);
 
       await this.prisma.authSession.create({
         data: {
           user_id: user.id,
-          refresh_toke_hash: hashedRefreshToken,
-          browser_agent: sessionMetadata.browser_agent,
-          ip_address: sessionMetadata.ip_address,
+          refresh_toke_hash:
+            hashedRefreshToken,
+          browser_agent:
+            sessionMetadata.browser_agent,
+          ip_address:
+            sessionMetadata.ip_address,
           expired_at: expiredAt,
           rotated_at: now,
           revoked_at: null,
@@ -96,13 +128,18 @@ export class AuthService {
       };
     } catch (error) {
       logger.error('Login failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
       });
 
       return {
         success: false,
         message:
-          error instanceof Error ? error.message : 'Login failed unexpectedly',
+          error instanceof Error
+            ? error.message
+            : 'Login failed unexpectedly',
       };
     }
   }
@@ -112,7 +149,8 @@ export class AuthService {
     sessionMetadata: SessionMetadata,
   ) {
     try {
-      const validation = validateRegisterInput(registerAuthInput);
+      const validation =
+        validateRegisterInput(registerAuthInput);
 
       if (!validation.ok) {
         return {
@@ -121,12 +159,22 @@ export class AuthService {
         };
       }
 
-      const { name, email, password, dateOfBirth, address, phoneNumber } =
-        validation.data;
+      const {
+        name,
+        email,
+        password,
+        dateOfBirth,
+        address,
+        phoneNumber,
+        role,
+      } = validation.data;
 
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email },
-      });
+      const existingUser =
+        await this.prisma.user.findUnique({
+          where: {
+            email,
+          },
+        });
 
       if (existingUser) {
         return {
@@ -135,24 +183,31 @@ export class AuthService {
         };
       }
 
-      const hashedPassword = await hashPassword(password);
+      const hashedPassword =
+        await hashPassword(password);
 
-      const user = await this.prisma.user.create({
-        data: {
-          name,
-          email,
-          password: hashedPassword,
-          dateOfBirth,
-          address,
-          phoneNumber,
-          role: {
-            connect: {
-              id: await this.resolveDefaultRoleId(),
+      const roleId =
+        await this.resolveRoleId(role);
+
+      const user =
+        await this.prisma.user.create({
+          data: {
+            name,
+            email,
+            password: hashedPassword,
+            dateOfBirth,
+            address,
+            phoneNumber,
+            role: {
+              connect: {
+                id: roleId,
+              },
             },
           },
-        },
-        include: { role: true },
-      });
+          include: {
+            role: true,
+          },
+        });
 
       const accessToken = signAccessToken({
         userId: user.id,
@@ -166,19 +221,30 @@ export class AuthService {
         email: user.email,
       });
 
-      const hashedRefreshToken = await hashPassword(refreshToken);
+      const hashedRefreshToken =
+        await hashPassword(refreshToken);
+
       const now = new Date();
-      const sessionTtlMs = this.parseDurationToMs(
-        process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
+
+      const sessionTtlMs =
+        this.parseDurationToMs(
+          process.env.REFRESH_TOKEN_EXPIRATION ??
+            '30d',
+        );
+
+      const expiredAt = new Date(
+        now.getTime() + sessionTtlMs,
       );
-      const expiredAt = new Date(now.getTime() + sessionTtlMs);
 
       await this.prisma.authSession.create({
         data: {
           user_id: user.id,
-          refresh_toke_hash: hashedRefreshToken,
-          browser_agent: sessionMetadata.browser_agent,
-          ip_address: sessionMetadata.ip_address,
+          refresh_toke_hash:
+            hashedRefreshToken,
+          browser_agent:
+            sessionMetadata.browser_agent,
+          ip_address:
+            sessionMetadata.ip_address,
           expired_at: expiredAt,
           rotated_at: now,
           revoked_at: null,
@@ -197,7 +263,10 @@ export class AuthService {
       };
     } catch (error) {
       logger.error('Register failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
       });
 
       return {
@@ -211,7 +280,8 @@ export class AuthService {
   }
 
   private parseDurationToMs(value: string): number {
-    const match = /^(\d+)([smhd])$/i.exec(value.trim());
+    const match =
+      /^(\d+)([smhd])$/i.exec(value.trim());
 
     if (!match) {
       return 21 * 24 * 60 * 60 * 1000;
@@ -235,15 +305,44 @@ export class AuthService {
     return amount * 24 * 60 * 60 * 1000;
   }
 
-  private async resolveDefaultRoleId(): Promise<number> {
-    const role = await this.prisma.role.upsert({
-      where: { name: 'student' },
-      update: {},
-      create: {
-        name: 'student',
-        description: 'Default student role',
-      },
-    });
+  private async resolveRoleId(
+    roleName?: string,
+  ): Promise<number> {
+    const normalizedRole =
+      roleName?.toLowerCase() || 'student';
+
+    const allowedRoles = [
+      'admin',
+      'teacher',
+      'student',
+    ];
+
+    if (!allowedRoles.includes(normalizedRole)) {
+      throw new BadRequestException(
+        'Role must be admin, teacher, or student',
+      );
+    }
+
+    const roleDescriptions = {
+      admin: 'Admin role',
+      teacher: 'Teacher role',
+      student: 'Default student role',
+    };
+
+    const role =
+      await this.prisma.role.upsert({
+        where: {
+          name: normalizedRole,
+        },
+        update: {},
+        create: {
+          name: normalizedRole,
+          description:
+            roleDescriptions[
+              normalizedRole as keyof typeof roleDescriptions
+            ],
+        },
+      });
 
     return role.id;
   }
