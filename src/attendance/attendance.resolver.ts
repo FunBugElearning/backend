@@ -2,6 +2,7 @@ import {
   Args,
   Context,
   Mutation,
+  Query,
   Resolver,
 } from '@nestjs/graphql';
 import {
@@ -14,8 +15,10 @@ import type { Request } from 'express';
 import { AttendanceService } from './attendance.service';
 import { AttendanceSession } from './entities/attendance-session.entity';
 import { AttendanceRecord } from './entities/attendance-record.entity';
+import { AttendanceSessionPagination } from './entities/attendance-session-pagination.entity';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
 import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
+import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
 
@@ -170,6 +173,76 @@ export class AttendanceResolver {
   }
 
   /**
+   * Admin xem được mọi class.
+   * Teacher/Student chỉ xem attendance của class mình thuộc về.
+   */
+  private async assertCanViewAttendanceClass(
+    req: Request,
+    classId: number,
+  ): Promise<void> {
+    const validation =
+      await verifyAuthenticatedUser(
+        req,
+        this.prisma,
+      );
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(
+        validation.message,
+      );
+    }
+
+    const classItem =
+      await this.prisma.class.findUnique({
+        where: {
+          id: classId,
+        },
+        select: {
+          id: true,
+          teachers: {
+            where: {
+              id: validation.userId,
+            },
+            select: {
+              id: true,
+            },
+          },
+          students: {
+            where: {
+              id: validation.userId,
+            },
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+    if (!classItem) {
+      throw new NotFoundException(
+        'Class is not found',
+      );
+    }
+
+    const role =
+      validation.role.toLowerCase();
+
+    if (role === 'admin') {
+      return;
+    }
+
+    const belongsToClass =
+      classItem.teachers.length > 0 ||
+      classItem.students.length > 0;
+
+    if (!belongsToClass) {
+      throw new ForbiddenException(
+        'You must belong to this class to view attendance sessions',
+      );
+    }
+  }
+
+  /**
    * Task 2:
    * Create attendance session for class.
    */
@@ -207,6 +280,28 @@ export class AttendanceResolver {
     );
 
     return this.attendanceService.bulkUpsertAttendanceRecords(
+      input,
+    );
+  }
+
+  /**
+   * Task 4:
+   * Get attendance sessions by class with pagination/filter/counts.
+   */
+  @Query(() => AttendanceSessionPagination, {
+    name: 'attendanceSessionsByClass',
+  })
+  async getAttendanceSessionsByClass(
+    @Args('input')
+    input: GetAttendanceSessionsInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanViewAttendanceClass(
+      req,
+      input.classId,
+    );
+
+    return this.attendanceService.getAttendanceSessionsByClass(
       input,
     );
   }

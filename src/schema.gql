@@ -229,6 +229,35 @@ type AttendanceSession {
   records: [AttendanceRecord!]
 }
 
+type AttendanceStatusCount {
+  present: Int!
+  absent: Int!
+  late: Int!
+  excused: Int!
+}
+
+type AttendanceSessionSummary {
+  id: Int!
+  classId: Int!
+  createdById: Int!
+  attendanceDate: DateTime!
+  title: String
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  statusCounts: AttendanceStatusCount!
+  class: Class
+  createdBy: User
+}
+
+type AttendanceSessionPagination {
+  items: [AttendanceSessionSummary!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -246,11 +275,20 @@ type Query {
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
+  attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
 }
 
 input SearchStudentsInput {
   name: String
   email: String
+}
+
+input GetAttendanceSessionsInput {
+  classId: Int!
+  page: Int = 1
+  limit: Int = 10
+  fromDate: DateTime
+  toDate: DateTime
 }
 
 type Mutation {

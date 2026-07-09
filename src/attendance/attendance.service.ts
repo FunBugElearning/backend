@@ -3,10 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
 import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
+import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
 
 @Injectable()
 export class AttendanceService {
@@ -64,7 +66,8 @@ export class AttendanceService {
       },
     });
   }
-    async bulkUpsertAttendanceRecords(
+
+  async bulkUpsertAttendanceRecords(
     input: BulkUpsertAttendanceRecordsInput,
   ) {
     if (input.records.length === 0) {
@@ -169,5 +172,102 @@ export class AttendanceService {
         }),
       ),
     );
+  }
+
+  async getAttendanceSessionsByClass(
+    input: GetAttendanceSessionsInput,
+  ) {
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const classItem =
+      await this.prisma.class.findUnique({
+        where: {
+          id: input.classId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!classItem) {
+      throw new NotFoundException(
+        'Class is not found',
+      );
+    }
+
+    const where: Prisma.AttendanceSessionWhereInput =
+      {
+        classId: input.classId,
+      };
+
+    if (input.fromDate || input.toDate) {
+      where.attendanceDate = {
+        ...(input.fromDate && {
+          gte: new Date(input.fromDate),
+        }),
+        ...(input.toDate && {
+          lte: new Date(input.toDate),
+        }),
+      };
+    }
+
+    const [total, sessions] =
+      await this.prisma.$transaction([
+        this.prisma.attendanceSession.count({
+          where,
+        }),
+        this.prisma.attendanceSession.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: {
+            attendanceDate: 'desc',
+          },
+          include: {
+            class: true,
+            createdBy: {
+              include: {
+                role: true,
+              },
+            },
+            records: {
+              select: {
+                status: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+    const items = sessions.map((session) => {
+      const statusCounts = {
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+      };
+
+      session.records.forEach((record) => {
+        statusCounts[record.status] += 1;
+      });
+
+      const { records, ...sessionData } =
+        session;
+
+      return {
+        ...sessionData,
+        statusCounts,
+      };
+    });
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
