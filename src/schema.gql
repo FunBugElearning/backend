@@ -168,6 +168,16 @@ type Class {
   students: [User!]
 }
 
+type ClassGradeCategory {
+  id: Int!
+  classId: Int!
+  name: String!
+  weight: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  class: Class
+}
+
 type Assignment {
   """Assignment ID"""
   id: Int!
@@ -190,11 +200,23 @@ type Assignment {
   """Class ID"""
   classId: Int!
 
+  """Grade category ID"""
+  categoryId: Int
+
+  """Maximum score"""
+  maxScore: Float!
+
+  """Created by user ID"""
+  createdById: Int
+
   """Created date"""
   createdAt: DateTime!
 
   """Updated date"""
   updatedAt: DateTime!
+  class: Class
+  category: ClassGradeCategory
+  createdBy: User
 }
 
 type AttendanceRecord {
@@ -256,16 +278,6 @@ type AttendanceSessionPagination {
   page: Int!
   limit: Int!
   totalPages: Int!
-}
-
-type ClassGradeCategory {
-  id: Int!
-  classId: Int!
-  name: String!
-  weight: Float!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  class: Class
 }
 
 type Query {
@@ -517,6 +529,8 @@ input CreateAssignmentInput {
   topic: String
   attachFiles: [String!]
   classId: Int!
+  categoryId: Int
+  maxScore: Float = 100
 }
 
 input CreateAttendanceSessionInput {
