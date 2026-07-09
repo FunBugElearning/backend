@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
-
+import { UpdateAssignmentInput } from './dto/update-assignment.input';
 @Injectable()
 export class AssignmentsService {
   constructor(
@@ -239,5 +239,138 @@ export class AssignmentsService {
     }
 
     return assignment;
+  }
+    async update(
+    input: UpdateAssignmentInput,
+  ) {
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: {
+          id: input.id,
+        },
+        select: {
+          id: true,
+          classId: true,
+        },
+      });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment is not found',
+      );
+    }
+
+    if (input.title !== undefined) {
+      const title = input.title.trim();
+
+      if (!title) {
+        throw new BadRequestException(
+          'Assignment title is required',
+        );
+      }
+    }
+
+    if (input.maxScore !== undefined && input.maxScore <= 0) {
+      throw new BadRequestException(
+        'Max score must be greater than 0',
+      );
+    }
+
+    if (input.categoryId !== undefined) {
+      const category =
+        await this.prisma.classGradeCategory.findUnique({
+          where: {
+            id: input.categoryId,
+          },
+          select: {
+            id: true,
+            classId: true,
+          },
+        });
+
+      if (!category) {
+        throw new NotFoundException(
+          'Grade category is not found',
+        );
+      }
+
+      if (category.classId !== assignment.classId) {
+        throw new BadRequestException(
+          'Grade category does not belong to this class',
+        );
+      }
+    }
+
+    return this.prisma.assignment.update({
+      where: {
+        id: input.id,
+      },
+      data: {
+        ...(input.title !== undefined && {
+          title: input.title.trim(),
+        }),
+        ...(input.description !== undefined && {
+          description:
+            input.description?.trim() || null,
+        }),
+        ...(input.deadline !== undefined && {
+          deadline: new Date(input.deadline),
+        }),
+        ...(input.topic !== undefined && {
+          topic: input.topic?.trim() || null,
+        }),
+        ...(input.attachFiles !== undefined && {
+          attachFiles: input.attachFiles,
+        }),
+        ...(input.categoryId !== undefined && {
+          categoryId: input.categoryId,
+        }),
+        ...(input.maxScore !== undefined && {
+          maxScore: input.maxScore,
+        }),
+      },
+      include: {
+        class: true,
+        category: true,
+        createdBy: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+  }
+
+  async remove(id: number) {
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment is not found',
+      );
+    }
+
+    return this.prisma.assignment.delete({
+      where: {
+        id,
+      },
+      include: {
+        class: true,
+        category: true,
+        createdBy: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
   }
 }

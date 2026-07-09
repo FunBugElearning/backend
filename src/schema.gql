@@ -338,6 +338,8 @@ type Mutation {
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   removeRole(id: Int!): Role!
   createAssignment(createAssignmentInput: CreateAssignmentInput!): Assignment!
+  updateAssignment(input: UpdateAssignmentInput!): Assignment!
+  removeAssignment(id: Int!): Assignment!
   createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
   bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
   updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
@@ -531,6 +533,17 @@ input CreateAssignmentInput {
   classId: Int!
   categoryId: Int
   maxScore: Float = 100
+}
+
+input UpdateAssignmentInput {
+  id: Int!
+  title: String
+  description: String
+  deadline: DateTime
+  topic: String
+  attachFiles: [String!]
+  categoryId: Int
+  maxScore: Float
 }
 
 input CreateAttendanceSessionInput {

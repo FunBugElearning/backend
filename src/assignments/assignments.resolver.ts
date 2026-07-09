@@ -18,6 +18,7 @@ import { Assignment } from './entities/assignment.entity';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { UpdateAssignmentInput } from './dto/update-assignment.input';
 
 @Resolver(() => Assignment)
 export class AssignmentsResolver {
@@ -89,6 +90,79 @@ export class AssignmentsResolver {
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
         'Teacher can only create assignments for classes they teach',
+      );
+    }
+
+    return validation.userId;
+  }
+
+    /**
+   * Admin được update/delete mọi assignment.
+   * Teacher chỉ update/delete assignment của class mình đang dạy.
+   */
+  private async assertCanManageAssignment(
+    req: Request,
+    assignmentId: number,
+  ): Promise<number> {
+    const validation =
+      await verifyAuthenticatedUser(
+        req,
+        this.prisma,
+      );
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(
+        validation.message,
+      );
+    }
+
+    const assignment =
+      await this.prisma.assignment.findUnique({
+        where: {
+          id: assignmentId,
+        },
+        select: {
+          id: true,
+          class: {
+            select: {
+              teachers: {
+                where: {
+                  id: validation.userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment is not found',
+      );
+    }
+
+    const role =
+      validation.role.toLowerCase();
+
+    if (role === 'admin') {
+      return validation.userId;
+    }
+
+    if (role !== 'teacher') {
+      throw new ForbiddenException(
+        'Admin or teacher role is required',
+      );
+    }
+
+    const isTeacherOfClass =
+      assignment.class.teachers.length > 0;
+
+    if (!isTeacherOfClass) {
+      throw new ForbiddenException(
+        'Teacher can only manage assignments for classes they teach',
       );
     }
 
@@ -194,5 +268,43 @@ export class AssignmentsResolver {
       validation.userId,
       validation.role,
     );
+  }
+    /**
+   * Task 10:
+   * Update assignment.
+   */
+  @Mutation(() => Assignment)
+  async updateAssignment(
+    @Args('input')
+    input: UpdateAssignmentInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAssignment(
+      req,
+      input.id,
+    );
+
+    return this.assignmentsService.update(input);
+  }
+
+  /**
+   * Task 10:
+   * Delete assignment.
+   * Related submissions and grades are deleted by Prisma cascade.
+   */
+  @Mutation(() => Assignment)
+  async removeAssignment(
+    @Args('id', {
+      type: () => Int,
+    })
+    id: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAssignment(
+      req,
+      id,
+    );
+
+    return this.assignmentsService.remove(id);
   }
 }
