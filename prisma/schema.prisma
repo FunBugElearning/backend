@@ -14,23 +14,26 @@ enum AttendanceStatus {
 }
 
 model User {
-  id               Int            @id @default(autoincrement())
-  name             String
-  email            String         @unique
-  password         String
-  dateOfBirth      DateTime?
-  address          String?
-  phoneNumber      String?
-  role_id          Int
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  authSessions     AuthSession[]
-  authAuditLogs    AuthAuditLog[]
-  classesAsTeacher Class[]        @relation("ClassTeachers")
-  classesAsStudent Class[]        @relation("ClassStudents")
-  classesCreated   Class[]        @relation("ClassCreator")
+  id                        Int                 @id @default(autoincrement())
+  name                      String
+  email                     String              @unique
+  password                  String
+  dateOfBirth               DateTime?
+  address                   String?
+  phoneNumber               String?
+  role_id                   Int
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  authSessions              AuthSession[]
+  authAuditLogs             AuthAuditLog[]
+  classesAsTeacher          Class[]             @relation("ClassTeachers")
+  classesAsStudent          Class[]             @relation("ClassStudents")
+  classesCreated            Class[]             @relation("ClassCreator")
   attendanceSessionsCreated AttendanceSession[] @relation("AttendanceSessionCreator")
   attendanceRecords         AttendanceRecord[]  @relation("StudentAttendanceRecords")
+  assignmentsCreated        Assignment[]        @relation("AssignmentCreator")
+  submissions               Submission[]        @relation("StudentSubmissions")
+  gradesGiven               Grade[]             @relation("GradesGiven")
 
   role Role @relation(fields: [role_id], references: [id])
 
@@ -85,11 +88,12 @@ model Class {
   updatedAt   DateTime @updatedAt
   createdById Int?
 
-  teachers           User[]              @relation("ClassTeachers")
-  students           User[]              @relation("ClassStudents")
+  teachers           User[]               @relation("ClassTeachers")
+  students           User[]               @relation("ClassStudents")
   assignments        Assignment[]
   attendanceSessions AttendanceSession[]
-  createdBy          User?               @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  gradeCategories    ClassGradeCategory[]
+  createdBy          User?                @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([createdById])
 }
@@ -102,12 +106,20 @@ model Assignment {
   topic       String?
   attachFiles String[] @default([])
   classId     Int
+  categoryId  Int?
+  maxScore    Float    @default(100)
+  createdById Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  class       Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  category    ClassGradeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy   User?               @relation("AssignmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  submissions Submission[]
 
   @@index([classId])
+  @@index([categoryId])
+  @@index([createdById])
 }
 
 model AttendanceSession {
@@ -145,4 +157,56 @@ model AttendanceRecord {
   @@index([attendanceSessionId])
   @@index([studentId])
   @@map("attendance_records")
+}
+
+model ClassGradeCategory {
+  id        Int      @id @default(autoincrement())
+  classId   Int
+  name      String
+  weight    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class       Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  @@unique([classId, name])
+  @@index([classId])
+  @@map("class_grade_categories")
+}
+
+model Submission {
+  id           Int      @id @default(autoincrement())
+  assignmentId Int
+  studentId    Int
+  content      String?
+  attachFiles  String[] @default([])
+  submittedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+  grade      Grade?
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@map("submissions")
+}
+
+model Grade {
+  id           Int      @id @default(autoincrement())
+  submissionId Int      @unique
+  score        Float
+  feedback     String?
+  gradedById   Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  gradedBy   User       @relation("GradesGiven", fields: [gradedById], references: [id], onDelete: Restrict)
+
+  @@index([gradedById])
+  @@map("grades")
 }
