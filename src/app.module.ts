@@ -13,6 +13,7 @@ import { ClassesModule } from './classes/classes.module';
 import { RolesModule } from './roles/roles.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { GradeCategoriesModule } from './grade-categories/grade-categories.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     RolesModule,
     AssignmentsModule,
     AttendanceModule,
+    GradeCategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

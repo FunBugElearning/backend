@@ -258,6 +258,16 @@ type AttendanceSessionPagination {
   totalPages: Int!
 }
 
+type ClassGradeCategory {
+  id: Int!
+  classId: Int!
+  name: String!
+  weight: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  class: Class
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -319,6 +329,7 @@ type Mutation {
   createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
   bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
   updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
+  createGradeCategory(input: CreateGradeCategoryInput!): ClassGradeCategory!
 }
 
 input CreateUserInput {
@@ -530,4 +541,10 @@ input UpdateAttendanceRecordInput {
   attendanceRecordId: Int!
   status: AttendanceStatus!
   note: String
+}
+
+input CreateGradeCategoryInput {
+  classId: Int!
+  name: String!
+  weight: Float!
 }
