@@ -197,6 +197,38 @@ type Assignment {
   updatedAt: DateTime!
 }
 
+type AttendanceRecord {
+  id: Int!
+  attendanceSessionId: Int!
+  studentId: Int!
+  status: AttendanceStatus!
+  note: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  student: User
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+type AttendanceSession {
+  id: Int!
+  classId: Int!
+  createdById: Int!
+  attendanceDate: DateTime!
+  title: String
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  class: Class
+  createdBy: User
+  records: [AttendanceRecord!]
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -245,6 +277,8 @@ type Mutation {
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   removeRole(id: Int!): Role!
   createAssignment(createAssignmentInput: CreateAssignmentInput!): Assignment!
+  createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
+  bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
 }
 
 input CreateUserInput {
@@ -432,4 +466,22 @@ input CreateAssignmentInput {
   topic: String
   attachFiles: [String!]
   classId: Int!
+}
+
+input CreateAttendanceSessionInput {
+  classId: Int!
+  attendanceDate: DateTime!
+  title: String
+  description: String
+}
+
+input BulkUpsertAttendanceRecordsInput {
+  attendanceSessionId: Int!
+  records: [AttendanceRecordInput!]!
+}
+
+input AttendanceRecordInput {
+  studentId: Int!
+  status: AttendanceStatus!
+  note: String
 }

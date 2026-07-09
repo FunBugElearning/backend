@@ -1,0 +1,173 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
+import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
+
+@Injectable()
+export class AttendanceService {
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async createAttendanceSession(
+    input: CreateAttendanceSessionInput,
+    createdById: number,
+  ) {
+    const classItem =
+      await this.prisma.class.findUnique({
+        where: {
+          id: input.classId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!classItem) {
+      throw new NotFoundException(
+        'Class is not found',
+      );
+    }
+
+    return this.prisma.attendanceSession.create({
+      data: {
+        classId: input.classId,
+        createdById,
+        attendanceDate: new Date(
+          input.attendanceDate,
+        ),
+        title: input.title?.trim() || undefined,
+        description:
+          input.description?.trim() || undefined,
+      },
+      include: {
+        class: true,
+        createdBy: {
+          include: {
+            role: true,
+          },
+        },
+        records: {
+          include: {
+            student: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+    async bulkUpsertAttendanceRecords(
+    input: BulkUpsertAttendanceRecordsInput,
+  ) {
+    if (input.records.length === 0) {
+      throw new BadRequestException(
+        'At least one attendance record is required',
+      );
+    }
+
+    const studentIds = input.records.map(
+      (record) => record.studentId,
+    );
+
+    const uniqueStudentIds = [
+      ...new Set(studentIds),
+    ];
+
+    if (
+      uniqueStudentIds.length !==
+      studentIds.length
+    ) {
+      throw new BadRequestException(
+        'Duplicate student ID in attendance records',
+      );
+    }
+
+    const attendanceSession =
+      await this.prisma.attendanceSession.findUnique({
+        where: {
+          id: input.attendanceSessionId,
+        },
+        select: {
+          id: true,
+          classId: true,
+          class: {
+            select: {
+              students: {
+                select: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+    if (!attendanceSession) {
+      throw new NotFoundException(
+        'Attendance session is not found',
+      );
+    }
+
+    const classStudentIds = new Set(
+      attendanceSession.class.students.map(
+        (student) => student.id,
+      ),
+    );
+
+    const invalidStudentIds =
+      uniqueStudentIds.filter(
+        (studentId) =>
+          !classStudentIds.has(studentId),
+      );
+
+    if (invalidStudentIds.length > 0) {
+      throw new BadRequestException(
+        `These students are not in class: ${invalidStudentIds.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    return this.prisma.$transaction(
+      input.records.map((record) =>
+        this.prisma.attendanceRecord.upsert({
+          where: {
+            attendanceSessionId_studentId: {
+              attendanceSessionId:
+                input.attendanceSessionId,
+              studentId: record.studentId,
+            },
+          },
+          update: {
+            status: record.status,
+            note:
+              record.note?.trim() || undefined,
+          },
+          create: {
+            attendanceSessionId:
+              input.attendanceSessionId,
+            studentId: record.studentId,
+            status: record.status,
+            note:
+              record.note?.trim() || undefined,
+          },
+          include: {
+            student: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        }),
+      ),
+    );
+  }
+}

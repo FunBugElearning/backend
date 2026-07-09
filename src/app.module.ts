@@ -12,6 +12,7 @@ import { AuthAuditLogsModule } from './auth_audit_logs/auth_audit_logs.module';
 import { ClassesModule } from './classes/classes.module';
 import { RolesModule } from './roles/roles.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
     ClassesModule,
     RolesModule,
     AssignmentsModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
