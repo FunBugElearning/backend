@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
 import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
 import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
+import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.input';
 
 @Injectable()
 export class AttendanceService {
@@ -269,5 +270,83 @@ export class AttendanceService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async getAttendanceSessionDetail(
+    attendanceSessionId: number,
+  ) {
+    const attendanceSession =
+      await this.prisma.attendanceSession.findUnique({
+        where: {
+          id: attendanceSessionId,
+        },
+        include: {
+          class: true,
+          createdBy: {
+            include: {
+              role: true,
+            },
+          },
+          records: {
+            include: {
+              student: {
+                include: {
+                  role: true,
+                },
+              },
+            },
+            orderBy: {
+              studentId: 'asc',
+            },
+          },
+        },
+      });
+
+    if (!attendanceSession) {
+      throw new NotFoundException(
+        'Attendance session is not found',
+      );
+    }
+
+    return attendanceSession;
+  }
+
+  async updateAttendanceRecord(
+    input: UpdateAttendanceRecordInput,
+  ) {
+    const attendanceRecord =
+      await this.prisma.attendanceRecord.findUnique({
+        where: {
+          id: input.attendanceRecordId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!attendanceRecord) {
+      throw new NotFoundException(
+        'Attendance record is not found',
+      );
+    }
+
+    return this.prisma.attendanceRecord.update({
+      where: {
+        id: input.attendanceRecordId,
+      },
+      data: {
+        status: input.status,
+        ...(input.note !== undefined && {
+          note: input.note.trim() || null,
+        }),
+      },
+      include: {
+        student: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
   }
 }

@@ -276,6 +276,7 @@ type Query {
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
   attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
+  attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
 }
 
 input SearchStudentsInput {
@@ -317,6 +318,7 @@ type Mutation {
   createAssignment(createAssignmentInput: CreateAssignmentInput!): Assignment!
   createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
   bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
+  updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
 }
 
 input CreateUserInput {
@@ -520,6 +522,12 @@ input BulkUpsertAttendanceRecordsInput {
 
 input AttendanceRecordInput {
   studentId: Int!
+  status: AttendanceStatus!
+  note: String
+}
+
+input UpdateAttendanceRecordInput {
+  attendanceRecordId: Int!
   status: AttendanceStatus!
   note: String
 }
