@@ -293,6 +293,18 @@ type Submission {
   student: User
 }
 
+type Grade {
+  id: Int!
+  submissionId: Int!
+  score: Float!
+  feedback: String
+  gradedById: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  submission: Submission
+  gradedBy: User
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -358,6 +370,7 @@ type Mutation {
   updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
   createGradeCategory(input: CreateGradeCategoryInput!): ClassGradeCategory!
   submitAssignment(input: SubmitAssignmentInput!): Submission!
+  gradeSubmission(input: GradeSubmissionInput!): Grade!
 }
 
 input CreateUserInput {
@@ -594,4 +607,10 @@ input SubmitAssignmentInput {
   assignmentId: Int!
   content: String
   attachFiles: [String!]
+}
+
+input GradeSubmissionInput {
+  submissionId: Int!
+  score: Float!
+  feedback: String
 }
