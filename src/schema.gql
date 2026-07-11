@@ -280,6 +280,19 @@ type AttendanceSessionPagination {
   totalPages: Int!
 }
 
+type Submission {
+  id: Int!
+  assignmentId: Int!
+  studentId: Int!
+  content: String
+  attachFiles: [String!]!
+  submittedAt: DateTime!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  assignment: Assignment
+  student: User
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -344,6 +357,7 @@ type Mutation {
   bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
   updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
   createGradeCategory(input: CreateGradeCategoryInput!): ClassGradeCategory!
+  submitAssignment(input: SubmitAssignmentInput!): Submission!
 }
 
 input CreateUserInput {
@@ -574,4 +588,10 @@ input CreateGradeCategoryInput {
   classId: Int!
   name: String!
   weight: Float!
+}
+
+input SubmitAssignmentInput {
+  assignmentId: Int!
+  content: String
+  attachFiles: [String!]
 }
