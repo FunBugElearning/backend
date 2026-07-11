@@ -305,6 +305,28 @@ type Grade {
   gradedBy: User
 }
 
+type GradebookCategoryScore {
+  categoryId: Int!
+  categoryName: String!
+  weight: Float!
+  averagePercent: Float!
+  weightedScore: Float!
+}
+
+type StudentGradebook {
+  studentId: Int!
+  studentName: String!
+  studentEmail: String!
+  finalScore: Float!
+  categoryScores: [GradebookCategoryScore!]!
+}
+
+type ClassGradebook {
+  classId: Int!
+  className: String!
+  students: [StudentGradebook!]!
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -324,6 +346,7 @@ type Query {
   assignment(id: Int!): Assignment!
   attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
+  classGradebook(classId: Int!): ClassGradebook!
 }
 
 input SearchStudentsInput {
