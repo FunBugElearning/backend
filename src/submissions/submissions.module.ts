@@ -6,9 +6,6 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  providers: [
-    SubmissionsResolver,
-    SubmissionsService,
-  ],
+  providers: [SubmissionsResolver, SubmissionsService],
 })
 export class SubmissionsModule {}

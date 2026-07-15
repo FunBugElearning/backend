@@ -9,38 +9,30 @@ import { GradeSubmissionInput } from './dto/grade-submission.input';
 
 @Injectable()
 export class GradesService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async gradeSubmission(
-    input: GradeSubmissionInput,
-    gradedById: number,
-  ) {
-    const submission =
-      await this.prisma.submission.findUnique({
-        where: {
-          id: input.submissionId,
-        },
-        include: {
-          assignment: {
-            include: {
-              class: true,
-              category: true,
-            },
-          },
-          student: {
-            include: {
-              role: true,
-            },
+  async gradeSubmission(input: GradeSubmissionInput, gradedById: number) {
+    const submission = await this.prisma.submission.findUnique({
+      where: {
+        id: input.submissionId,
+      },
+      include: {
+        assignment: {
+          include: {
+            class: true,
+            category: true,
           },
         },
-      });
+        student: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
 
     if (!submission) {
-      throw new NotFoundException(
-        'Submission is not found',
-      );
+      throw new NotFoundException('Submission is not found');
     }
 
     if (input.score > submission.assignment.maxScore) {
@@ -55,15 +47,13 @@ export class GradesService {
       },
       update: {
         score: input.score,
-        feedback:
-          input.feedback?.trim() || null,
+        feedback: input.feedback?.trim() || null,
         gradedById,
       },
       create: {
         submissionId: input.submissionId,
         score: input.score,
-        feedback:
-          input.feedback?.trim() || null,
+        feedback: input.feedback?.trim() || null,
         gradedById,
       },
       include: {

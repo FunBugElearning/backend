@@ -6,9 +6,6 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  providers: [
-    AttendanceResolver,
-    AttendanceService,
-  ],
+  providers: [AttendanceResolver, AttendanceService],
 })
 export class AttendanceModule {}

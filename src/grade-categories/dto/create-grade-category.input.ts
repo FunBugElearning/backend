@@ -1,11 +1,5 @@
 import { Field, Float, InputType, Int } from '@nestjs/graphql';
-import {
-  IsInt,
-  IsNumber,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsInt, IsNumber, IsString, Max, Min } from 'class-validator';
 
 @InputType()
 export class CreateGradeCategoryInput {

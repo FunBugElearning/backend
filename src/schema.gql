@@ -347,6 +347,7 @@ type Query {
   attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
   classGradebook(classId: Int!): ClassGradebook!
+  myGrades(classId: Int!): StudentGradebook!
 }
 
 input SearchStudentsInput {

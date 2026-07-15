@@ -10,14 +10,9 @@ import { SubmitAssignmentInput } from './dto/submit-assignment.input';
 
 @Injectable()
 export class SubmissionsService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async submitAssignment(
-    input: SubmitAssignmentInput,
-    studentId: number,
-  ) {
+  async submitAssignment(input: SubmitAssignmentInput, studentId: number) {
     const content = input.content?.trim();
     const attachFiles = input.attachFiles ?? [];
 
@@ -27,36 +22,32 @@ export class SubmissionsService {
       );
     }
 
-    const assignment =
-      await this.prisma.assignment.findUnique({
-        where: {
-          id: input.assignmentId,
-        },
-        include: {
-          class: {
-            select: {
-              id: true,
-              students: {
-                where: {
-                  id: studentId,
-                },
-                select: {
-                  id: true,
-                },
+    const assignment = await this.prisma.assignment.findUnique({
+      where: {
+        id: input.assignmentId,
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            students: {
+              where: {
+                id: studentId,
+              },
+              select: {
+                id: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!assignment) {
-      throw new NotFoundException(
-        'Assignment is not found',
-      );
+      throw new NotFoundException('Assignment is not found');
     }
 
-    const isStudentOfClass =
-      assignment.class.students.length > 0;
+    const isStudentOfClass = assignment.class.students.length > 0;
 
     if (!isStudentOfClass) {
       throw new ForbiddenException(

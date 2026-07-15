@@ -10,47 +10,37 @@ import { CreateGradeCategoryInput } from './dto/create-grade-category.input';
 
 @Injectable()
 export class GradeCategoriesService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async createGradeCategory(
-    input: CreateGradeCategoryInput,
-  ) {
+  async createGradeCategory(input: CreateGradeCategoryInput) {
     const name = input.name.trim();
 
     if (!name) {
-      throw new BadRequestException(
-        'Category name is required',
-      );
+      throw new BadRequestException('Category name is required');
     }
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: input.classId,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: input.classId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const existingCategory =
-      await this.prisma.classGradeCategory.findFirst({
-        where: {
-          classId: input.classId,
-          name: {
-            equals: name,
-            mode: 'insensitive',
-          },
+    const existingCategory = await this.prisma.classGradeCategory.findFirst({
+      where: {
+        classId: input.classId,
+        name: {
+          equals: name,
+          mode: 'insensitive',
         },
-      });
+      },
+    });
 
     if (existingCategory) {
       throw new ConflictException(
@@ -58,21 +48,18 @@ export class GradeCategoriesService {
       );
     }
 
-    const totalWeightResult =
-      await this.prisma.classGradeCategory.aggregate({
-        where: {
-          classId: input.classId,
-        },
-        _sum: {
-          weight: true,
-        },
-      });
+    const totalWeightResult = await this.prisma.classGradeCategory.aggregate({
+      where: {
+        classId: input.classId,
+      },
+      _sum: {
+        weight: true,
+      },
+    });
 
-    const currentTotalWeight =
-      totalWeightResult._sum.weight ?? 0;
+    const currentTotalWeight = totalWeightResult._sum.weight ?? 0;
 
-    const newTotalWeight =
-      currentTotalWeight + input.weight;
+    const newTotalWeight = currentTotalWeight + input.weight;
 
     if (newTotalWeight > 100) {
       throw new BadRequestException(

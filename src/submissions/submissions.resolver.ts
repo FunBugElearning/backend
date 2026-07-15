@@ -1,13 +1,5 @@
-import {
-  Args,
-  Context,
-  Mutation,
-  Resolver,
-} from '@nestjs/graphql';
-import {
-  ForbiddenException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { SubmissionsService } from './submissions.service';
@@ -26,28 +18,17 @@ export class SubmissionsResolver {
   /**
    * Chỉ Student được submit assignment.
    */
-  private async assertStudent(
-    req: Request,
-  ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+  private async assertStudent(req: Request): Promise<number> {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role !== 'student') {
-      throw new ForbiddenException(
-        'Student role is required',
-      );
+      throw new ForbiddenException('Student role is required');
     }
 
     return validation.userId;
@@ -64,12 +45,8 @@ export class SubmissionsResolver {
     input: SubmitAssignmentInput,
     @Context('req') req: Request,
   ) {
-    const studentId =
-      await this.assertStudent(req);
+    const studentId = await this.assertStudent(req);
 
-    return this.submissionsService.submitAssignment(
-      input,
-      studentId,
-    );
+    return this.submissionsService.submitAssignment(input, studentId);
   }
 }

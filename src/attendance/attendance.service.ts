@@ -13,40 +13,32 @@ import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.inpu
 
 @Injectable()
 export class AttendanceService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createAttendanceSession(
     input: CreateAttendanceSessionInput,
     createdById: number,
   ) {
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: input.classId,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: input.classId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
     return this.prisma.attendanceSession.create({
       data: {
         classId: input.classId,
         createdById,
-        attendanceDate: new Date(
-          input.attendanceDate,
-        ),
+        attendanceDate: new Date(input.attendanceDate),
         title: input.title?.trim() || undefined,
-        description:
-          input.description?.trim() || undefined,
+        description: input.description?.trim() || undefined,
       },
       include: {
         class: true,
@@ -68,75 +60,57 @@ export class AttendanceService {
     });
   }
 
-  async bulkUpsertAttendanceRecords(
-    input: BulkUpsertAttendanceRecordsInput,
-  ) {
+  async bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput) {
     if (input.records.length === 0) {
       throw new BadRequestException(
         'At least one attendance record is required',
       );
     }
 
-    const studentIds = input.records.map(
-      (record) => record.studentId,
-    );
+    const studentIds = input.records.map((record) => record.studentId);
 
-    const uniqueStudentIds = [
-      ...new Set(studentIds),
-    ];
+    const uniqueStudentIds = [...new Set(studentIds)];
 
-    if (
-      uniqueStudentIds.length !==
-      studentIds.length
-    ) {
+    if (uniqueStudentIds.length !== studentIds.length) {
       throw new BadRequestException(
         'Duplicate student ID in attendance records',
       );
     }
 
-    const attendanceSession =
-      await this.prisma.attendanceSession.findUnique({
-        where: {
-          id: input.attendanceSessionId,
-        },
-        select: {
-          id: true,
-          classId: true,
-          class: {
-            select: {
-              students: {
-                select: {
-                  id: true,
-                },
+    const attendanceSession = await this.prisma.attendanceSession.findUnique({
+      where: {
+        id: input.attendanceSessionId,
+      },
+      select: {
+        id: true,
+        classId: true,
+        class: {
+          select: {
+            students: {
+              select: {
+                id: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!attendanceSession) {
-      throw new NotFoundException(
-        'Attendance session is not found',
-      );
+      throw new NotFoundException('Attendance session is not found');
     }
 
     const classStudentIds = new Set(
-      attendanceSession.class.students.map(
-        (student) => student.id,
-      ),
+      attendanceSession.class.students.map((student) => student.id),
     );
 
-    const invalidStudentIds =
-      uniqueStudentIds.filter(
-        (studentId) =>
-          !classStudentIds.has(studentId),
-      );
+    const invalidStudentIds = uniqueStudentIds.filter(
+      (studentId) => !classStudentIds.has(studentId),
+    );
 
     if (invalidStudentIds.length > 0) {
       throw new BadRequestException(
-        `These students are not in class: ${invalidStudentIds.join(
-          ', ',
-        )}`,
+        `These students are not in class: ${invalidStudentIds.join(', ')}`,
       );
     }
 
@@ -145,23 +119,19 @@ export class AttendanceService {
         this.prisma.attendanceRecord.upsert({
           where: {
             attendanceSessionId_studentId: {
-              attendanceSessionId:
-                input.attendanceSessionId,
+              attendanceSessionId: input.attendanceSessionId,
               studentId: record.studentId,
             },
           },
           update: {
             status: record.status,
-            note:
-              record.note?.trim() || undefined,
+            note: record.note?.trim() || undefined,
           },
           create: {
-            attendanceSessionId:
-              input.attendanceSessionId,
+            attendanceSessionId: input.attendanceSessionId,
             studentId: record.studentId,
             status: record.status,
-            note:
-              record.note?.trim() || undefined,
+            note: record.note?.trim() || undefined,
           },
           include: {
             student: {
@@ -175,33 +145,27 @@ export class AttendanceService {
     );
   }
 
-  async getAttendanceSessionsByClass(
-    input: GetAttendanceSessionsInput,
-  ) {
+  async getAttendanceSessionsByClass(input: GetAttendanceSessionsInput) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: input.classId,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: input.classId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const where: Prisma.AttendanceSessionWhereInput =
-      {
-        classId: input.classId,
-      };
+    const where: Prisma.AttendanceSessionWhereInput = {
+      classId: input.classId,
+    };
 
     if (input.fromDate || input.toDate) {
       where.attendanceDate = {
@@ -214,33 +178,32 @@ export class AttendanceService {
       };
     }
 
-    const [total, sessions] =
-      await this.prisma.$transaction([
-        this.prisma.attendanceSession.count({
-          where,
-        }),
-        this.prisma.attendanceSession.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: {
-            attendanceDate: 'desc',
-          },
-          include: {
-            class: true,
-            createdBy: {
-              include: {
-                role: true,
-              },
-            },
-            records: {
-              select: {
-                status: true,
-              },
+    const [total, sessions] = await this.prisma.$transaction([
+      this.prisma.attendanceSession.count({
+        where,
+      }),
+      this.prisma.attendanceSession.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          attendanceDate: 'desc',
+        },
+        include: {
+          class: true,
+          createdBy: {
+            include: {
+              role: true,
             },
           },
-        }),
-      ]);
+          records: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      }),
+    ]);
 
     const items = sessions.map((session) => {
       const statusCounts = {
@@ -254,8 +217,7 @@ export class AttendanceService {
         statusCounts[record.status] += 1;
       });
 
-      const { records, ...sessionData } =
-        session;
+      const { records, ...sessionData } = session;
 
       return {
         ...sessionData,
@@ -272,62 +234,52 @@ export class AttendanceService {
     };
   }
 
-  async getAttendanceSessionDetail(
-    attendanceSessionId: number,
-  ) {
-    const attendanceSession =
-      await this.prisma.attendanceSession.findUnique({
-        where: {
-          id: attendanceSessionId,
-        },
-        include: {
-          class: true,
-          createdBy: {
-            include: {
-              role: true,
-            },
+  async getAttendanceSessionDetail(attendanceSessionId: number) {
+    const attendanceSession = await this.prisma.attendanceSession.findUnique({
+      where: {
+        id: attendanceSessionId,
+      },
+      include: {
+        class: true,
+        createdBy: {
+          include: {
+            role: true,
           },
-          records: {
-            include: {
-              student: {
-                include: {
-                  role: true,
-                },
+        },
+        records: {
+          include: {
+            student: {
+              include: {
+                role: true,
               },
             },
-            orderBy: {
-              studentId: 'asc',
-            },
+          },
+          orderBy: {
+            studentId: 'asc',
           },
         },
-      });
+      },
+    });
 
     if (!attendanceSession) {
-      throw new NotFoundException(
-        'Attendance session is not found',
-      );
+      throw new NotFoundException('Attendance session is not found');
     }
 
     return attendanceSession;
   }
 
-  async updateAttendanceRecord(
-    input: UpdateAttendanceRecordInput,
-  ) {
-    const attendanceRecord =
-      await this.prisma.attendanceRecord.findUnique({
-        where: {
-          id: input.attendanceRecordId,
-        },
-        select: {
-          id: true,
-        },
-      });
+  async updateAttendanceRecord(input: UpdateAttendanceRecordInput) {
+    const attendanceRecord = await this.prisma.attendanceRecord.findUnique({
+      where: {
+        id: input.attendanceRecordId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!attendanceRecord) {
-      throw new NotFoundException(
-        'Attendance record is not found',
-      );
+      throw new NotFoundException('Attendance record is not found');
     }
 
     return this.prisma.attendanceRecord.update({

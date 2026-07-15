@@ -1,9 +1,4 @@
-import {
-  Field,
-  Float,
-  Int,
-  ObjectType,
-} from '@nestjs/graphql';
+import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 import { Class } from 'src/classes/entities/class.entity';
 import { User } from 'src/users/entities/user.entity';
 import { ClassGradeCategory } from 'src/grade-categories/entities/class-grade-category.entity';

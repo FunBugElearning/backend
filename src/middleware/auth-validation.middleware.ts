@@ -101,8 +101,7 @@ export function validateRegisterInput(
   if (!dobValidation.ok) {
     return {
       ok: false,
-      message:
-        'dateOfBirth is invalid. Use ISO date format (YYYY-MM-DD)',
+      message: 'dateOfBirth is invalid. Use ISO date format (YYYY-MM-DD)',
     };
   }
 
@@ -120,9 +119,7 @@ export function validateRegisterInput(
   };
 }
 
-export function validateLoginInput(
-  payload: LoginInput,
-): LoginValidationResult {
+export function validateLoginInput(payload: LoginInput): LoginValidationResult {
   logger.info('Validating login input', {
     payload: {
       ...payload,

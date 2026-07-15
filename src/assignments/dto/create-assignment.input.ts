@@ -1,9 +1,4 @@
-import {
-  Field,
-  Float,
-  InputType,
-  Int,
-} from '@nestjs/graphql';
+import { Field, Float, InputType, Int } from '@nestjs/graphql';
 import {
   IsArray,
   IsDateString,

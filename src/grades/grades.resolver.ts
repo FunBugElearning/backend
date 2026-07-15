@@ -1,9 +1,4 @@
-import {
-  Args,
-  Context,
-  Mutation,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import {
   ForbiddenException,
   NotFoundException,
@@ -32,65 +27,52 @@ export class GradesResolver {
     req: Request,
     submissionId: number,
   ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const submission =
-      await this.prisma.submission.findUnique({
-        where: {
-          id: submissionId,
-        },
-        select: {
-          id: true,
-          assignment: {
-            select: {
-              class: {
-                select: {
-                  teachers: {
-                    where: {
-                      id: validation.userId,
-                    },
-                    select: {
-                      id: true,
-                    },
+    const submission = await this.prisma.submission.findUnique({
+      where: {
+        id: submissionId,
+      },
+      select: {
+        id: true,
+        assignment: {
+          select: {
+            class: {
+              select: {
+                teachers: {
+                  where: {
+                    id: validation.userId,
+                  },
+                  select: {
+                    id: true,
                   },
                 },
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!submission) {
-      throw new NotFoundException(
-        'Submission is not found',
-      );
+      throw new NotFoundException('Submission is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return validation.userId;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
-    const isTeacherOfClass =
-      submission.assignment.class.teachers.length > 0;
+    const isTeacherOfClass = submission.assignment.class.teachers.length > 0;
 
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
@@ -112,15 +94,11 @@ export class GradesResolver {
     input: GradeSubmissionInput,
     @Context('req') req: Request,
   ) {
-    const gradedById =
-      await this.assertCanGradeSubmission(
-        req,
-        input.submissionId,
-      );
-
-    return this.gradesService.gradeSubmission(
-      input,
-      gradedById,
+    const gradedById = await this.assertCanGradeSubmission(
+      req,
+      input.submissionId,
     );
+
+    return this.gradesService.gradeSubmission(input, gradedById);
   }
 }

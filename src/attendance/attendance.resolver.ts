@@ -1,11 +1,4 @@
-import {
-  Args,
-  Context,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import {
   ForbiddenException,
   NotFoundException,
@@ -39,57 +32,44 @@ export class AttendanceResolver {
     req: Request,
     classId: number,
   ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          id: true,
-          teachers: {
-            where: {
-              id: validation.userId,
-            },
-            select: {
-              id: true,
-            },
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        teachers: {
+          where: {
+            id: validation.userId,
+          },
+          select: {
+            id: true,
           },
         },
-      });
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return validation.userId;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
-    const isTeacherOfClass =
-      classItem.teachers.length > 0;
+    const isTeacherOfClass = classItem.teachers.length > 0;
 
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
@@ -108,62 +88,49 @@ export class AttendanceResolver {
     req: Request,
     attendanceSessionId: number,
   ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const attendanceSession =
-      await this.prisma.attendanceSession.findUnique({
-        where: {
-          id: attendanceSessionId,
-        },
-        select: {
-          id: true,
-          class: {
-            select: {
-              id: true,
-              teachers: {
-                where: {
-                  id: validation.userId,
-                },
-                select: {
-                  id: true,
-                },
+    const attendanceSession = await this.prisma.attendanceSession.findUnique({
+      where: {
+        id: attendanceSessionId,
+      },
+      select: {
+        id: true,
+        class: {
+          select: {
+            id: true,
+            teachers: {
+              where: {
+                id: validation.userId,
+              },
+              select: {
+                id: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!attendanceSession) {
-      throw new NotFoundException(
-        'Attendance session is not found',
-      );
+      throw new NotFoundException('Attendance session is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return validation.userId;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
-    const isTeacherOfClass =
-      attendanceSession.class.teachers.length > 0;
+    const isTeacherOfClass = attendanceSession.class.teachers.length > 0;
 
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
@@ -182,66 +149,53 @@ export class AttendanceResolver {
     req: Request,
     attendanceRecordId: number,
   ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const attendanceRecord =
-      await this.prisma.attendanceRecord.findUnique({
-        where: {
-          id: attendanceRecordId,
-        },
-        select: {
-          id: true,
-          attendanceSession: {
-            select: {
-              class: {
-                select: {
-                  teachers: {
-                    where: {
-                      id: validation.userId,
-                    },
-                    select: {
-                      id: true,
-                    },
+    const attendanceRecord = await this.prisma.attendanceRecord.findUnique({
+      where: {
+        id: attendanceRecordId,
+      },
+      select: {
+        id: true,
+        attendanceSession: {
+          select: {
+            class: {
+              select: {
+                teachers: {
+                  where: {
+                    id: validation.userId,
+                  },
+                  select: {
+                    id: true,
                   },
                 },
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!attendanceRecord) {
-      throw new NotFoundException(
-        'Attendance record is not found',
-      );
+      throw new NotFoundException('Attendance record is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return validation.userId;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
     const isTeacherOfClass =
-      attendanceRecord.attendanceSession.class.teachers
-        .length > 0;
+      attendanceRecord.attendanceSession.class.teachers.length > 0;
 
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
@@ -260,60 +214,49 @@ export class AttendanceResolver {
     req: Request,
     classId: number,
   ): Promise<void> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          id: true,
-          teachers: {
-            where: {
-              id: validation.userId,
-            },
-            select: {
-              id: true,
-            },
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        teachers: {
+          where: {
+            id: validation.userId,
           },
-          students: {
-            where: {
-              id: validation.userId,
-            },
-            select: {
-              id: true,
-            },
+          select: {
+            id: true,
           },
         },
-      });
+        students: {
+          where: {
+            id: validation.userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return;
     }
 
     const belongsToClass =
-      classItem.teachers.length > 0 ||
-      classItem.students.length > 0;
+      classItem.teachers.length > 0 || classItem.students.length > 0;
 
     if (!belongsToClass) {
       throw new ForbiddenException(
@@ -330,56 +273,46 @@ export class AttendanceResolver {
     req: Request,
     attendanceSessionId: number,
   ): Promise<void> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const attendanceSession =
-      await this.prisma.attendanceSession.findUnique({
-        where: {
-          id: attendanceSessionId,
-        },
-        select: {
-          id: true,
-          class: {
-            select: {
-              teachers: {
-                where: {
-                  id: validation.userId,
-                },
-                select: {
-                  id: true,
-                },
+    const attendanceSession = await this.prisma.attendanceSession.findUnique({
+      where: {
+        id: attendanceSessionId,
+      },
+      select: {
+        id: true,
+        class: {
+          select: {
+            teachers: {
+              where: {
+                id: validation.userId,
               },
-              students: {
-                where: {
-                  id: validation.userId,
-                },
-                select: {
-                  id: true,
-                },
+              select: {
+                id: true,
+              },
+            },
+            students: {
+              where: {
+                id: validation.userId,
+              },
+              select: {
+                id: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!attendanceSession) {
-      throw new NotFoundException(
-        'Attendance session is not found',
-      );
+      throw new NotFoundException('Attendance session is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return;
@@ -406,16 +339,12 @@ export class AttendanceResolver {
     input: CreateAttendanceSessionInput,
     @Context('req') req: Request,
   ) {
-    const currentUserId =
-      await this.assertCanManageAttendanceClass(
-        req,
-        input.classId,
-      );
-
-    return this.attendanceService.createAttendanceSession(
-      input,
-      currentUserId,
+    const currentUserId = await this.assertCanManageAttendanceClass(
+      req,
+      input.classId,
     );
+
+    return this.attendanceService.createAttendanceSession(input, currentUserId);
   }
 
   /**
@@ -428,14 +357,9 @@ export class AttendanceResolver {
     input: BulkUpsertAttendanceRecordsInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageAttendanceSession(
-      req,
-      input.attendanceSessionId,
-    );
+    await this.assertCanManageAttendanceSession(req, input.attendanceSessionId);
 
-    return this.attendanceService.bulkUpsertAttendanceRecords(
-      input,
-    );
+    return this.attendanceService.bulkUpsertAttendanceRecords(input);
   }
 
   /**
@@ -450,14 +374,9 @@ export class AttendanceResolver {
     input: GetAttendanceSessionsInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewAttendanceClass(
-      req,
-      input.classId,
-    );
+    await this.assertCanViewAttendanceClass(req, input.classId);
 
-    return this.attendanceService.getAttendanceSessionsByClass(
-      input,
-    );
+    return this.attendanceService.getAttendanceSessionsByClass(input);
   }
 
   /**
@@ -474,10 +393,7 @@ export class AttendanceResolver {
     attendanceSessionId: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewAttendanceSession(
-      req,
-      attendanceSessionId,
-    );
+    await this.assertCanViewAttendanceSession(req, attendanceSessionId);
 
     return this.attendanceService.getAttendanceSessionDetail(
       attendanceSessionId,
@@ -494,13 +410,8 @@ export class AttendanceResolver {
     input: UpdateAttendanceRecordInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageAttendanceRecord(
-      req,
-      input.attendanceRecordId,
-    );
+    await this.assertCanManageAttendanceRecord(req, input.attendanceRecordId);
 
-    return this.attendanceService.updateAttendanceRecord(
-      input,
-    );
+    return this.attendanceService.updateAttendanceRecord(input);
   }
 }

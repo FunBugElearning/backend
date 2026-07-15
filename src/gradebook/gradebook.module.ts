@@ -6,9 +6,6 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  providers: [
-    GradebookResolver,
-    GradebookService,
-  ],
+  providers: [GradebookResolver, GradebookService],
 })
 export class GradebookModule {}

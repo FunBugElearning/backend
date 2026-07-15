@@ -1,10 +1,5 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import {
-  IsArray,
-  IsInt,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString } from 'class-validator';
 
 @InputType()
 export class SubmitAssignmentInput {

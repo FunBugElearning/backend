@@ -18,8 +18,8 @@ class User {
   }
 }
 
-const user = new User("Khanh", "123456", "student");
+const user = new User('Khanh', '123456', 'student');
 
 user.introduce();
 console.log(user.name);
-console.log(user.checkPassword("123456"));
+console.log(user.checkPassword('123456'));

@@ -14,16 +14,8 @@ import { SearchStudentsInput } from './dto/search-students.input';
 export class ClassesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(
-    createClassInput: CreateClassInput,
-    createdById: number,
-  ) {
-    const {
-      name,
-      description,
-      teacherIds,
-      studentIds,
-    } = createClassInput;
+  create(createClassInput: CreateClassInput, createdById: number) {
+    const { name, description, teacherIds, studentIds } = createClassInput;
 
     return this.prisma.class.create({
       data: {
@@ -31,12 +23,10 @@ export class ClassesService {
         description,
         createdById,
         teachers: {
-          connect:
-            teacherIds?.map((id) => ({ id })) ?? [],
+          connect: teacherIds?.map((id) => ({ id })) ?? [],
         },
         students: {
-          connect:
-            studentIds?.map((id) => ({ id })) ?? [],
+          connect: studentIds?.map((id) => ({ id })) ?? [],
         },
       },
       include: {
@@ -81,9 +71,7 @@ export class ClassesService {
     });
 
     if (!user) {
-      throw new NotFoundException(
-        'User is not found',
-      );
+      throw new NotFoundException('User is not found');
     }
 
     return this.prisma.class.findMany({
@@ -113,16 +101,8 @@ export class ClassesService {
     });
   }
 
-  update(
-    id: number,
-    updateClassInput: UpdateClassInput,
-  ) {
-    const {
-      name,
-      description,
-      teacherIds,
-      studentIds,
-    } = updateClassInput;
+  update(id: number, updateClassInput: UpdateClassInput) {
+    const { name, description, teacherIds, studentIds } = updateClassInput;
 
     return this.prisma.class.update({
       where: {
@@ -174,72 +154,52 @@ export class ClassesService {
     });
   }
 
-  async assignClassesToTeacher(
-    teacherId: number,
-    classIds: number[],
-  ) {
+  async assignClassesToTeacher(teacherId: number, classIds: number[]) {
     const uniqueClassIds = [...new Set(classIds)];
 
     if (uniqueClassIds.length === 0) {
-      throw new BadRequestException(
-        'At least one class ID is required',
-      );
+      throw new BadRequestException('At least one class ID is required');
     }
 
-    const teacher =
-      await this.prisma.user.findUnique({
-        where: {
-          id: teacherId,
-        },
-        include: {
-          role: true,
-        },
-      });
+    const teacher = await this.prisma.user.findUnique({
+      where: {
+        id: teacherId,
+      },
+      include: {
+        role: true,
+      },
+    });
 
     if (!teacher) {
-      throw new NotFoundException(
-        'Teacher is not found',
-      );
+      throw new NotFoundException('Teacher is not found');
     }
 
-    if (
-      teacher.role.name.toLowerCase() !==
-      'teacher'
-    ) {
-      throw new BadRequestException(
-        'Selected user does not have teacher role',
-      );
+    if (teacher.role.name.toLowerCase() !== 'teacher') {
+      throw new BadRequestException('Selected user does not have teacher role');
     }
 
-    const existingClasses =
-      await this.prisma.class.findMany({
-        where: {
-          id: {
-            in: uniqueClassIds,
-          },
+    const existingClasses = await this.prisma.class.findMany({
+      where: {
+        id: {
+          in: uniqueClassIds,
         },
-        select: {
-          id: true,
-        },
-      });
+      },
+      select: {
+        id: true,
+      },
+    });
 
     const existingClassIds = new Set(
-      existingClasses.map(
-        (classItem) => classItem.id,
-      ),
+      existingClasses.map((classItem) => classItem.id),
     );
 
-    const missingClassIds =
-      uniqueClassIds.filter(
-        (classId) =>
-          !existingClassIds.has(classId),
-      );
+    const missingClassIds = uniqueClassIds.filter(
+      (classId) => !existingClassIds.has(classId),
+    );
 
     if (missingClassIds.length > 0) {
       throw new NotFoundException(
-        `Classes are not found: ${missingClassIds.join(
-          ', ',
-        )}`,
+        `Classes are not found: ${missingClassIds.join(', ')}`,
       );
     }
 
@@ -275,71 +235,57 @@ export class ClassesService {
     const uniqueUserIds = [...new Set(userIds)];
 
     if (uniqueUserIds.length === 0) {
-      throw new BadRequestException(
-        'At least one user ID is required',
-      );
+      throw new BadRequestException('At least one user ID is required');
     }
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          id: true,
-          teachers: {
-            select: {
-              id: true,
-            },
-          },
-          students: {
-            select: {
-              id: true,
-            },
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        teachers: {
+          select: {
+            id: true,
           },
         },
-      });
+        students: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const users =
-      await this.prisma.user.findMany({
-        where: {
-          id: {
-            in: uniqueUserIds,
-          },
+    const users = await this.prisma.user.findMany({
+      where: {
+        id: {
+          in: uniqueUserIds,
         },
-        include: {
-          role: true,
-        },
-      });
+      },
+      include: {
+        role: true,
+      },
+    });
 
-    const existingUserIds = new Set(
-      users.map((user) => user.id),
+    const existingUserIds = new Set(users.map((user) => user.id));
+
+    const missingUserIds = uniqueUserIds.filter(
+      (userId) => !existingUserIds.has(userId),
     );
-
-    const missingUserIds =
-      uniqueUserIds.filter(
-        (userId) =>
-          !existingUserIds.has(userId),
-      );
 
     if (missingUserIds.length > 0) {
       throw new NotFoundException(
-        `Users are not found: ${missingUserIds.join(
-          ', ',
-        )}`,
+        `Users are not found: ${missingUserIds.join(', ')}`,
       );
     }
 
     const invalidUsers = users.filter(
-      (user) =>
-        user.role.name.toLowerCase() !==
-        expectedRole,
+      (user) => user.role.name.toLowerCase() !== expectedRole,
     );
 
     if (invalidUsers.length > 0) {
@@ -352,19 +298,14 @@ export class ClassesService {
 
     const currentMemberIds = new Set(
       expectedRole === 'teacher'
-        ? classItem.teachers.map(
-            (teacher) => teacher.id,
-          )
-        : classItem.students.map(
-            (student) => student.id,
-          ),
+        ? classItem.teachers.map((teacher) => teacher.id)
+        : classItem.students.map((student) => student.id),
     );
 
     if (action === 'add') {
-      const duplicatedUserIds =
-        uniqueUserIds.filter((userId) =>
-          currentMemberIds.has(userId),
-        );
+      const duplicatedUserIds = uniqueUserIds.filter((userId) =>
+        currentMemberIds.has(userId),
+      );
 
       if (duplicatedUserIds.length > 0) {
         throw new BadRequestException(
@@ -376,11 +317,9 @@ export class ClassesService {
     }
 
     if (action === 'remove') {
-      const notInClassUserIds =
-        uniqueUserIds.filter(
-          (userId) =>
-            !currentMemberIds.has(userId),
-        );
+      const notInClassUserIds = uniqueUserIds.filter(
+        (userId) => !currentMemberIds.has(userId),
+      );
 
       if (notInClassUserIds.length > 0) {
         throw new BadRequestException(
@@ -394,17 +333,13 @@ export class ClassesService {
     return uniqueUserIds;
   }
 
-  async addTeachersToClass(
-    classId: number,
-    teacherIds: number[],
-  ) {
-    const validTeacherIds =
-      await this.validateClassMembers(
-        classId,
-        teacherIds,
-        'teacher',
-        'add',
-      );
+  async addTeachersToClass(classId: number, teacherIds: number[]) {
+    const validTeacherIds = await this.validateClassMembers(
+      classId,
+      teacherIds,
+      'teacher',
+      'add',
+    );
 
     return this.prisma.class.update({
       where: {
@@ -425,17 +360,13 @@ export class ClassesService {
     });
   }
 
-  async addStudentsToClass(
-    classId: number,
-    studentIds: number[],
-  ) {
-    const validStudentIds =
-      await this.validateClassMembers(
-        classId,
-        studentIds,
-        'student',
-        'add',
-      );
+  async addStudentsToClass(classId: number, studentIds: number[]) {
+    const validStudentIds = await this.validateClassMembers(
+      classId,
+      studentIds,
+      'student',
+      'add',
+    );
 
     return this.prisma.class.update({
       where: {
@@ -456,17 +387,13 @@ export class ClassesService {
     });
   }
 
-  async removeTeachersFromClass(
-    classId: number,
-    teacherIds: number[],
-  ) {
-    const validTeacherIds =
-      await this.validateClassMembers(
-        classId,
-        teacherIds,
-        'teacher',
-        'remove',
-      );
+  async removeTeachersFromClass(classId: number, teacherIds: number[]) {
+    const validTeacherIds = await this.validateClassMembers(
+      classId,
+      teacherIds,
+      'teacher',
+      'remove',
+    );
 
     return this.prisma.class.update({
       where: {
@@ -487,17 +414,13 @@ export class ClassesService {
     });
   }
 
-  async removeStudentsFromClass(
-    classId: number,
-    studentIds: number[],
-  ) {
-    const validStudentIds =
-      await this.validateClassMembers(
-        classId,
-        studentIds,
-        'student',
-        'remove',
-      );
+  async removeStudentsFromClass(classId: number, studentIds: number[]) {
+    const validStudentIds = await this.validateClassMembers(
+      classId,
+      studentIds,
+      'student',
+      'remove',
+    );
 
     return this.prisma.class.update({
       where: {
@@ -519,61 +442,53 @@ export class ClassesService {
   }
 
   async getTeachersByClassId(classId: number) {
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          teachers: {
-            include: {
-              role: true,
-            },
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        teachers: {
+          include: {
+            role: true,
           },
         },
-      });
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
     return classItem.teachers;
   }
 
   async getStudentsByClassId(classId: number) {
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          students: {
-            include: {
-              role: true,
-            },
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        students: {
+          include: {
+            role: true,
           },
         },
-      });
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
     return classItem.students;
   }
 
-    async searchStudents(input: SearchStudentsInput) {
+  async searchStudents(input: SearchStudentsInput) {
     const name = input.name?.trim();
     const email = input.email?.trim();
 
     if (!name && !email) {
-      throw new BadRequestException(
-        'Name or email is required',
-      );
+      throw new BadRequestException('Name or email is required');
     }
 
     const searchConditions: Prisma.UserWhereInput[] = [];

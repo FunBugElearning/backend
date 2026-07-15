@@ -1,11 +1,4 @@
-import {
-  Args,
-  Context,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import {
   ForbiddenException,
   NotFoundException,
@@ -35,57 +28,44 @@ export class AssignmentsResolver {
     req: Request,
     classId: number,
   ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          id: true,
-          teachers: {
-            where: {
-              id: validation.userId,
-            },
-            select: {
-              id: true,
-            },
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        teachers: {
+          where: {
+            id: validation.userId,
+          },
+          select: {
+            id: true,
           },
         },
-      });
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return validation.userId;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
-    const isTeacherOfClass =
-      classItem.teachers.length > 0;
+    const isTeacherOfClass = classItem.teachers.length > 0;
 
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
@@ -96,7 +76,7 @@ export class AssignmentsResolver {
     return validation.userId;
   }
 
-    /**
+  /**
    * Admin được update/delete mọi assignment.
    * Teacher chỉ update/delete assignment của class mình đang dạy.
    */
@@ -104,61 +84,48 @@ export class AssignmentsResolver {
     req: Request,
     assignmentId: number,
   ): Promise<number> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const assignment =
-      await this.prisma.assignment.findUnique({
-        where: {
-          id: assignmentId,
-        },
-        select: {
-          id: true,
-          class: {
-            select: {
-              teachers: {
-                where: {
-                  id: validation.userId,
-                },
-                select: {
-                  id: true,
-                },
+    const assignment = await this.prisma.assignment.findUnique({
+      where: {
+        id: assignmentId,
+      },
+      select: {
+        id: true,
+        class: {
+          select: {
+            teachers: {
+              where: {
+                id: validation.userId,
+              },
+              select: {
+                id: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!assignment) {
-      throw new NotFoundException(
-        'Assignment is not found',
-      );
+      throw new NotFoundException('Assignment is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return validation.userId;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
-    const isTeacherOfClass =
-      assignment.class.teachers.length > 0;
+    const isTeacherOfClass = assignment.class.teachers.length > 0;
 
     if (!isTeacherOfClass) {
       throw new ForbiddenException(
@@ -173,23 +140,15 @@ export class AssignmentsResolver {
     req: Request,
     targetUserId: number,
   ): Promise<void> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const isAdmin =
-      validation.role.toLowerCase() === 'admin';
+    const isAdmin = validation.role.toLowerCase() === 'admin';
 
-    const isOwnData =
-      validation.userId === targetUserId;
+    const isOwnData = validation.userId === targetUserId;
 
     if (!isAdmin && !isOwnData) {
       throw new ForbiddenException(
@@ -204,16 +163,12 @@ export class AssignmentsResolver {
     createAssignmentInput: CreateAssignmentInput,
     @Context('req') req: Request,
   ) {
-    const currentUserId =
-      await this.assertCanManageAssignmentClass(
-        req,
-        createAssignmentInput.classId,
-      );
-
-    return this.assignmentsService.create(
-      createAssignmentInput,
-      currentUserId,
+    const currentUserId = await this.assertCanManageAssignmentClass(
+      req,
+      createAssignmentInput.classId,
     );
+
+    return this.assignmentsService.create(createAssignmentInput, currentUserId);
   }
 
   @Query(() => [Assignment], {
@@ -230,15 +185,9 @@ export class AssignmentsResolver {
     classId: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewAssignments(
-      req,
-      userId,
-    );
+    await this.assertCanViewAssignments(req, userId);
 
-    return this.assignmentsService.findByUserAndClass(
-      userId,
-      classId,
-    );
+    return this.assignmentsService.findByUserAndClass(userId, classId);
   }
 
   @Query(() => Assignment, {
@@ -251,16 +200,10 @@ export class AssignmentsResolver {
     id: number,
     @Context('req') req: Request,
   ) {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
     return this.assignmentsService.findOne(
@@ -269,7 +212,7 @@ export class AssignmentsResolver {
       validation.role,
     );
   }
-    /**
+  /**
    * Task 10:
    * Update assignment.
    */
@@ -279,10 +222,7 @@ export class AssignmentsResolver {
     input: UpdateAssignmentInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageAssignment(
-      req,
-      input.id,
-    );
+    await this.assertCanManageAssignment(req, input.id);
 
     return this.assignmentsService.update(input);
   }
@@ -300,10 +240,7 @@ export class AssignmentsResolver {
     id: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageAssignment(
-      req,
-      id,
-    );
+    await this.assertCanManageAssignment(req, id);
 
     return this.assignmentsService.remove(id);
   }
