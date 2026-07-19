@@ -217,6 +217,7 @@ export class AttendanceService {
         statusCounts[record.status] += 1;
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { records, ...sessionData } = session;
 
       return {
