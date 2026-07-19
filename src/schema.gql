@@ -168,6 +168,35 @@ type Class {
   students: [User!]
 }
 
+type Assignment {
+  """Assignment ID"""
+  id: Int!
+
+  """Assignment title"""
+  title: String!
+
+  """Assignment description"""
+  description: String
+
+  """Assignment deadline"""
+  deadline: DateTime!
+
+  """Assignment topic"""
+  topic: String
+
+  """Attached file URLs"""
+  attachFiles: [String!]!
+
+  """Class ID"""
+  classId: Int!
+
+  """Created date"""
+  createdAt: DateTime!
+
+  """Updated date"""
+  updatedAt: DateTime!
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
@@ -176,9 +205,12 @@ type Query {
   authAuditLogs: [AuthAuditLog!]!
   authAuditLog(id: Int!): AuthAuditLog!
   classes: [Class!]!
+  classesByUserId(userId: Int!): [Class!]!
   class(id: Int!): Class!
   roles: [Role!]!
   role(id: Int!): Role!
+  assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
+  assignment(id: Int!): Assignment!
 }
 
 type Mutation {
@@ -199,6 +231,7 @@ type Mutation {
   createRole(createRoleInput: CreateRoleInput!): Role!
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   removeRole(id: Int!): Role!
+  createAssignment(createAssignmentInput: CreateAssignmentInput!): Assignment!
 }
 
 input CreateUserInput {
@@ -364,4 +397,13 @@ input UpdateRoleInput {
   """Role Description"""
   description: String
   id: Int!
+}
+
+input CreateAssignmentInput {
+  title: String!
+  description: String
+  deadline: DateTime!
+  topic: String
+  attachFiles: [String!]
+  classId: Int!
 }

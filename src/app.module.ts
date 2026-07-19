@@ -11,6 +11,7 @@ import { AuthSessionsModule } from './auth_sessions/auth_sessions.module';
 import { AuthAuditLogsModule } from './auth_audit_logs/auth_audit_logs.module';
 import { ClassesModule } from './classes/classes.module';
 import { RolesModule } from './roles/roles.module';
+import { AssignmentsModule } from './assignments/assignments.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RolesModule } from './roles/roles.module';
     AuthAuditLogsModule,
     ClassesModule,
     RolesModule,
+    AssignmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

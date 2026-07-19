@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ClassesResolver } from './classes.resolver';
-import { ClassesService } from './classes.service';
+import { AssignmentsResolver } from './assignments.resolver';
+import { AssignmentsService } from './assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-describe('ClassesResolver', () => {
-  let resolver: ClassesResolver;
+describe('AssignmentsResolver', () => {
+  let resolver: AssignmentsResolver;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ClassesResolver,
+        AssignmentsResolver,
         {
-          provide: ClassesService,
+          provide: AssignmentsService,
           useValue: {},
         },
         {
@@ -21,7 +21,7 @@ describe('ClassesResolver', () => {
       ],
     }).compile();
 
-    resolver = module.get<ClassesResolver>(ClassesResolver);
+    resolver = module.get<AssignmentsResolver>(AssignmentsResolver);
   });
 
   it('should be defined', () => {
