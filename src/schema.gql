@@ -207,6 +207,9 @@ type Query {
   classes: [Class!]!
   classesByUserId(userId: Int!): [Class!]!
   class(id: Int!): Class!
+  teachersByClassId(classId: Int!): [User!]!
+  studentsByClassId(classId: Int!): [User!]!
+  searchStudents(keyword: String!): [User!]!
   roles: [Role!]!
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
@@ -228,6 +231,11 @@ type Mutation {
   createClass(createClassInput: CreateClassInput!): Class!
   updateClass(updateClassInput: UpdateClassInput!): Class!
   removeClass(id: Int!): Class!
+  assignClassesToTeacher(input: AssignClassesToTeacherInput!): [Class!]!
+  addTeachersToClass(input: ManageClassMembersInput!): Class!
+  addStudentsToClass(input: ManageClassMembersInput!): Class!
+  removeTeachersFromClass(input: ManageClassMembersInput!): Class!
+  removeStudentsFromClass(input: ManageClassMembersInput!): Class!
   createRole(createRoleInput: CreateRoleInput!): Role!
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   removeRole(id: Int!): Role!
@@ -380,6 +388,16 @@ input UpdateClassInput {
   """Student IDs"""
   studentIds: [Int!]
   id: Int!
+}
+
+input AssignClassesToTeacherInput {
+  teacherId: Int!
+  classIds: [Int!]!
+}
+
+input ManageClassMembersInput {
+  classId: Int!
+  userIds: [Int!]!
 }
 
 input CreateRoleInput {
