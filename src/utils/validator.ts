@@ -15,8 +15,7 @@ export function validateEmptyFields(
       value === null ||
       value === undefined ||
       (typeof value === 'string' && value.trim() === '') ||
-      (isPlainObject &&
-        Object.keys(value as Record<string, unknown>).length === 0);
+      (isPlainObject && Object.keys(value).length === 0);
 
     if (isEmpty) {
       emptyFields.push(key);

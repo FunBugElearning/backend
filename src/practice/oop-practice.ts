@@ -24,7 +24,7 @@ abstract class User {
 // Inheritance: Student kế thừa User.
 class Student extends User {
   constructor(name: string, password: string) {
-    super(name, password, "student");
+    super(name, password, 'student');
   }
 
   // Polymorphism: Student có cách triển khai getRole riêng.
@@ -40,7 +40,7 @@ class Student extends User {
 // Inheritance: Teacher cũng kế thừa User.
 class Teacher extends User {
   constructor(name: string, password: string) {
-    super(name, password, "teacher");
+    super(name, password, 'teacher');
   }
 
   // Polymorphism: Teacher triển khai getRole khác Student.
@@ -53,17 +53,17 @@ class Teacher extends User {
   }
 }
 
-const student = new Student("Khanh", "123456");
-const teacher = new Teacher("John", "abcdef");
+const student = new Student('Khanh', '123456');
+const teacher = new Teacher('John', 'abcdef');
 
 student.introduce();
 console.log(student.getRole());
-console.log(student.checkPassword("123456"));
+console.log(student.checkPassword('123456'));
 student.viewAssignments();
 
-console.log("----------------");
+console.log('----------------');
 
 teacher.introduce();
 console.log(teacher.getRole());
-console.log(teacher.checkPassword("wrong-password"));
+console.log(teacher.checkPassword('wrong-password'));
 teacher.createAssignment();

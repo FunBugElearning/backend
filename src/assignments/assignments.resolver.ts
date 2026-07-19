@@ -1,13 +1,7 @@
-import {
-  Args,
-  Context,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import {
   ForbiddenException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
@@ -16,10 +10,8 @@ import { AssignmentsService } from './assignments.service';
 import { Assignment } from './entities/assignment.entity';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import {
-  verifyAdminTeacherRole,
-  verifyAuthenticatedUser,
-} from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { UpdateAssignmentInput } from './dto/update-assignment.input';
 
 @Resolver(() => Assignment)
 export class AssignmentsResolver {
@@ -28,18 +20,120 @@ export class AssignmentsResolver {
     private readonly prisma: PrismaService,
   ) {}
 
-  private async assertAdminTeacher(req: Request): Promise<void> {
-    const validation = await verifyAdminTeacherRole(req, this.prisma);
+  /**
+   * Admin được tạo assignment cho mọi class.
+   * Teacher chỉ được tạo assignment cho class mình đang dạy.
+   */
+  private async assertCanManageAssignmentClass(
+    req: Request,
+    classId: number,
+  ): Promise<number> {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
-    if (validation.ok) {
-      return;
-    }
-
-    if (validation.status === 'unauthorized') {
+    if (!validation.ok) {
       throw new UnauthorizedException(validation.message);
     }
 
-    throw new ForbiddenException(validation.message);
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        teachers: {
+          where: {
+            id: validation.userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    const role = validation.role.toLowerCase();
+
+    if (role === 'admin') {
+      return validation.userId;
+    }
+
+    if (role !== 'teacher') {
+      throw new ForbiddenException('Admin or teacher role is required');
+    }
+
+    const isTeacherOfClass = classItem.teachers.length > 0;
+
+    if (!isTeacherOfClass) {
+      throw new ForbiddenException(
+        'Teacher can only create assignments for classes they teach',
+      );
+    }
+
+    return validation.userId;
+  }
+
+  /**
+   * Admin được update/delete mọi assignment.
+   * Teacher chỉ update/delete assignment của class mình đang dạy.
+   */
+  private async assertCanManageAssignment(
+    req: Request,
+    assignmentId: number,
+  ): Promise<number> {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    const assignment = await this.prisma.assignment.findUnique({
+      where: {
+        id: assignmentId,
+      },
+      select: {
+        id: true,
+        class: {
+          select: {
+            teachers: {
+              where: {
+                id: validation.userId,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment is not found');
+    }
+
+    const role = validation.role.toLowerCase();
+
+    if (role === 'admin') {
+      return validation.userId;
+    }
+
+    if (role !== 'teacher') {
+      throw new ForbiddenException('Admin or teacher role is required');
+    }
+
+    const isTeacherOfClass = assignment.class.teachers.length > 0;
+
+    if (!isTeacherOfClass) {
+      throw new ForbiddenException(
+        'Teacher can only manage assignments for classes they teach',
+      );
+    }
+
+    return validation.userId;
   }
 
   private async assertCanViewAssignments(
@@ -53,6 +147,7 @@ export class AssignmentsResolver {
     }
 
     const isAdmin = validation.role.toLowerCase() === 'admin';
+
     const isOwnData = validation.userId === targetUserId;
 
     if (!isAdmin && !isOwnData) {
@@ -68,17 +163,26 @@ export class AssignmentsResolver {
     createAssignmentInput: CreateAssignmentInput,
     @Context('req') req: Request,
   ) {
-    await this.assertAdminTeacher(req);
+    const currentUserId = await this.assertCanManageAssignmentClass(
+      req,
+      createAssignmentInput.classId,
+    );
 
-    return this.assignmentsService.create(createAssignmentInput);
+    return this.assignmentsService.create(createAssignmentInput, currentUserId);
   }
 
   @Query(() => [Assignment], {
     name: 'assignmentsByUserAndClass',
   })
   async findByUserAndClass(
-    @Args('userId', { type: () => Int }) userId: number,
-    @Args('classId', { type: () => Int }) classId: number,
+    @Args('userId', {
+      type: () => Int,
+    })
+    userId: number,
+    @Args('classId', {
+      type: () => Int,
+    })
+    classId: number,
     @Context('req') req: Request,
   ) {
     await this.assertCanViewAssignments(req, userId);
@@ -89,23 +193,55 @@ export class AssignmentsResolver {
   @Query(() => Assignment, {
     name: 'assignment',
   })
-@Query(() => Assignment, {
-  name: 'assignment',
-})
-async findOne(
-  @Args('id', { type: () => Int }) id: number,
-  @Context('req') req: Request,
-) {
-  const validation = await verifyAuthenticatedUser(req, this.prisma);
+  async findOne(
+    @Args('id', {
+      type: () => Int,
+    })
+    id: number,
+    @Context('req') req: Request,
+  ) {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
-  if (!validation.ok) {
-    throw new UnauthorizedException(validation.message);
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    return this.assignmentsService.findOne(
+      id,
+      validation.userId,
+      validation.role,
+    );
+  }
+  /**
+   * Task 10:
+   * Update assignment.
+   */
+  @Mutation(() => Assignment)
+  async updateAssignment(
+    @Args('input')
+    input: UpdateAssignmentInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAssignment(req, input.id);
+
+    return this.assignmentsService.update(input);
   }
 
-  return this.assignmentsService.findOne(
-    id,
-    validation.userId,
-    validation.role,
-  );
-}
+  /**
+   * Task 10:
+   * Delete assignment.
+   * Related submissions and grades are deleted by Prisma cascade.
+   */
+  @Mutation(() => Assignment)
+  async removeAssignment(
+    @Args('id', {
+      type: () => Int,
+    })
+    id: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAssignment(req, id);
+
+    return this.assignmentsService.remove(id);
+  }
 }

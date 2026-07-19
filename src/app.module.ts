@@ -12,6 +12,11 @@ import { AuthAuditLogsModule } from './auth_audit_logs/auth_audit_logs.module';
 import { ClassesModule } from './classes/classes.module';
 import { RolesModule } from './roles/roles.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { GradeCategoriesModule } from './grade-categories/grade-categories.module';
+import { SubmissionsModule } from './submissions/submissions.module';
+import { GradesModule } from './grades/grades.module';
+import { GradebookModule } from './gradebook/gradebook.module';
 
 @Module({
   imports: [
@@ -28,6 +33,11 @@ import { AssignmentsModule } from './assignments/assignments.module';
     ClassesModule,
     RolesModule,
     AssignmentsModule,
+    AttendanceModule,
+    GradeCategoriesModule,
+    SubmissionsModule,
+    GradesModule,
+    GradebookModule,
   ],
   controllers: [AppController],
   providers: [AppService],

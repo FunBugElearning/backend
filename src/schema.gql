@@ -168,6 +168,16 @@ type Class {
   students: [User!]
 }
 
+type ClassGradeCategory {
+  id: Int!
+  classId: Int!
+  name: String!
+  weight: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  class: Class
+}
+
 type Assignment {
   """Assignment ID"""
   id: Int!
@@ -190,11 +200,131 @@ type Assignment {
   """Class ID"""
   classId: Int!
 
+  """Grade category ID"""
+  categoryId: Int
+
+  """Maximum score"""
+  maxScore: Float!
+
+  """Created by user ID"""
+  createdById: Int
+
   """Created date"""
   createdAt: DateTime!
 
   """Updated date"""
   updatedAt: DateTime!
+  class: Class
+  category: ClassGradeCategory
+  createdBy: User
+}
+
+type AttendanceRecord {
+  id: Int!
+  attendanceSessionId: Int!
+  studentId: Int!
+  status: AttendanceStatus!
+  note: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  student: User
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+type AttendanceSession {
+  id: Int!
+  classId: Int!
+  createdById: Int!
+  attendanceDate: DateTime!
+  title: String
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  class: Class
+  createdBy: User
+  records: [AttendanceRecord!]
+}
+
+type AttendanceStatusCount {
+  present: Int!
+  absent: Int!
+  late: Int!
+  excused: Int!
+}
+
+type AttendanceSessionSummary {
+  id: Int!
+  classId: Int!
+  createdById: Int!
+  attendanceDate: DateTime!
+  title: String
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  statusCounts: AttendanceStatusCount!
+  class: Class
+  createdBy: User
+}
+
+type AttendanceSessionPagination {
+  items: [AttendanceSessionSummary!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type Submission {
+  id: Int!
+  assignmentId: Int!
+  studentId: Int!
+  content: String
+  attachFiles: [String!]!
+  submittedAt: DateTime!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  assignment: Assignment
+  student: User
+}
+
+type Grade {
+  id: Int!
+  submissionId: Int!
+  score: Float!
+  feedback: String
+  gradedById: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  submission: Submission
+  gradedBy: User
+}
+
+type GradebookCategoryScore {
+  categoryId: Int!
+  categoryName: String!
+  weight: Float!
+  averagePercent: Float!
+  weightedScore: Float!
+}
+
+type StudentGradebook {
+  studentId: Int!
+  studentName: String!
+  studentEmail: String!
+  finalScore: Float!
+  categoryScores: [GradebookCategoryScore!]!
+}
+
+type ClassGradebook {
+  classId: Int!
+  className: String!
+  students: [StudentGradebook!]!
 }
 
 type Query {
@@ -209,11 +339,28 @@ type Query {
   class(id: Int!): Class!
   teachersByClassId(classId: Int!): [User!]!
   studentsByClassId(classId: Int!): [User!]!
-  searchStudents(keyword: String!): [User!]!
+  searchStudents(input: SearchStudentsInput!): [User!]!
   roles: [Role!]!
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
+  attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
+  attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
+  classGradebook(classId: Int!): ClassGradebook!
+  myGrades(classId: Int!): StudentGradebook!
+}
+
+input SearchStudentsInput {
+  name: String
+  email: String
+}
+
+input GetAttendanceSessionsInput {
+  classId: Int!
+  page: Int = 1
+  limit: Int = 10
+  fromDate: DateTime
+  toDate: DateTime
 }
 
 type Mutation {
@@ -240,6 +387,14 @@ type Mutation {
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   removeRole(id: Int!): Role!
   createAssignment(createAssignmentInput: CreateAssignmentInput!): Assignment!
+  updateAssignment(input: UpdateAssignmentInput!): Assignment!
+  removeAssignment(id: Int!): Assignment!
+  createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
+  bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
+  updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
+  createGradeCategory(input: CreateGradeCategoryInput!): ClassGradeCategory!
+  submitAssignment(input: SubmitAssignmentInput!): Submission!
+  gradeSubmission(input: GradeSubmissionInput!): Grade!
 }
 
 input CreateUserInput {
@@ -315,6 +470,9 @@ input RegisterAuthInput {
 
   """User Phonenumber"""
   phoneNumber: String
+
+  """User Role: admin, teacher, or student"""
+  role: String
 }
 
 input UpdateAuthSessionInput {
@@ -424,4 +582,59 @@ input CreateAssignmentInput {
   topic: String
   attachFiles: [String!]
   classId: Int!
+  categoryId: Int
+  maxScore: Float = 100
+}
+
+input UpdateAssignmentInput {
+  id: Int!
+  title: String
+  description: String
+  deadline: DateTime
+  topic: String
+  attachFiles: [String!]
+  categoryId: Int
+  maxScore: Float
+}
+
+input CreateAttendanceSessionInput {
+  classId: Int!
+  attendanceDate: DateTime!
+  title: String
+  description: String
+}
+
+input BulkUpsertAttendanceRecordsInput {
+  attendanceSessionId: Int!
+  records: [AttendanceRecordInput!]!
+}
+
+input AttendanceRecordInput {
+  studentId: Int!
+  status: AttendanceStatus!
+  note: String
+}
+
+input UpdateAttendanceRecordInput {
+  attendanceRecordId: Int!
+  status: AttendanceStatus!
+  note: String
+}
+
+input CreateGradeCategoryInput {
+  classId: Int!
+  name: String!
+  weight: Float!
+}
+
+input SubmitAssignmentInput {
+  assignmentId: Int!
+  content: String
+  attachFiles: [String!]
+}
+
+input GradeSubmissionInput {
+  submissionId: Int!
+  score: Float!
+  feedback: String
 }

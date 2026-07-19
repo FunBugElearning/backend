@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+
 import { LoginAuthInput } from './dto/login-auth.input';
 import { RegisterAuthInput } from './dto/register-auth.input';
 import { logger } from 'src/helper/logger';
@@ -33,8 +34,12 @@ export class AuthService {
       const { email, password } = validation.data;
 
       const user = await this.prisma.user.findUnique({
-        where: { email },
-        include: { role: true },
+        where: {
+          email,
+        },
+        include: {
+          role: true,
+        },
       });
 
       if (!user) {
@@ -44,7 +49,7 @@ export class AuthService {
         };
       }
 
-      const isPasswordValid = await comparePassword(password, user?.password);
+      const isPasswordValid = await comparePassword(password, user.password);
 
       if (!isPasswordValid) {
         return {
@@ -66,10 +71,13 @@ export class AuthService {
       });
 
       const hashedRefreshToken = await hashPassword(refreshToken);
+
       const now = new Date();
+
       const sessionTtlMs = this.parseDurationToMs(
         process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
       );
+
       const expiredAt = new Date(now.getTime() + sessionTtlMs);
 
       await this.prisma.authSession.create({
@@ -121,11 +129,13 @@ export class AuthService {
         };
       }
 
-      const { name, email, password, dateOfBirth, address, phoneNumber } =
+      const { name, email, password, dateOfBirth, address, phoneNumber, role } =
         validation.data;
 
       const existingUser = await this.prisma.user.findUnique({
-        where: { email },
+        where: {
+          email,
+        },
       });
 
       if (existingUser) {
@@ -137,6 +147,8 @@ export class AuthService {
 
       const hashedPassword = await hashPassword(password);
 
+      const roleId = await this.resolveRoleId(role);
+
       const user = await this.prisma.user.create({
         data: {
           name,
@@ -147,11 +159,13 @@ export class AuthService {
           phoneNumber,
           role: {
             connect: {
-              id: await this.resolveDefaultRoleId(),
+              id: roleId,
             },
           },
         },
-        include: { role: true },
+        include: {
+          role: true,
+        },
       });
 
       const accessToken = signAccessToken({
@@ -167,10 +181,13 @@ export class AuthService {
       });
 
       const hashedRefreshToken = await hashPassword(refreshToken);
+
       const now = new Date();
+
       const sessionTtlMs = this.parseDurationToMs(
         process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
       );
+
       const expiredAt = new Date(now.getTime() + sessionTtlMs);
 
       await this.prisma.authSession.create({
@@ -235,13 +252,30 @@ export class AuthService {
     return amount * 24 * 60 * 60 * 1000;
   }
 
-  private async resolveDefaultRoleId(): Promise<number> {
+  private async resolveRoleId(roleName?: string): Promise<number> {
+    const normalizedRole = roleName?.toLowerCase() || 'student';
+
+    const allowedRoles = ['admin', 'teacher', 'student'];
+
+    if (!allowedRoles.includes(normalizedRole)) {
+      throw new BadRequestException('Role must be admin, teacher, or student');
+    }
+
+    const roleDescriptions = {
+      admin: 'Admin role',
+      teacher: 'Teacher role',
+      student: 'Default student role',
+    };
+
     const role = await this.prisma.role.upsert({
-      where: { name: 'student' },
+      where: {
+        name: normalizedRole,
+      },
       update: {},
       create: {
-        name: 'student',
-        description: 'Default student role',
+        name: normalizedRole,
+        description:
+          roleDescriptions[normalizedRole as keyof typeof roleDescriptions],
       },
     });
 

@@ -1,11 +1,4 @@
-import {
-  Args,
-  Context,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import {
   ForbiddenException,
   NotFoundException,
@@ -26,6 +19,7 @@ import {
   verifyAuthenticatedUser,
 } from 'src/middleware/role-authorization.middleware';
 import { User } from 'src/users/entities/user.entity';
+import { SearchStudentsInput } from './dto/search-students.input';
 
 @Resolver(() => Class)
 export class ClassesResolver {
@@ -37,54 +31,35 @@ export class ClassesResolver {
   /**
    * Chỉ Admin được sử dụng.
    */
-  private async assertAdmin(
-    req: Request,
-  ): Promise<number> {
-    const validation = await verifyAdminRole(
-      req,
-      this.prisma,
-    );
+  private async assertAdmin(req: Request): Promise<number> {
+    const validation = await verifyAdminRole(req, this.prisma);
 
     if (validation.ok) {
       return validation.userId;
     }
 
     if (validation.status === 'unauthorized') {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    throw new ForbiddenException(
-      validation.message,
-    );
+    throw new ForbiddenException(validation.message);
   }
 
   /**
    * Admin hoặc Teacher được sử dụng.
    */
-  private async assertAdminTeacher(
-    req: Request,
-  ): Promise<number> {
-    const validation =
-      await verifyAdminTeacherRole(
-        req,
-        this.prisma,
-      );
+  private async assertAdminTeacher(req: Request): Promise<number> {
+    const validation = await verifyAdminTeacherRole(req, this.prisma);
 
     if (validation.ok) {
       return validation.userId;
     }
 
     if (validation.status === 'unauthorized') {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    throw new ForbiddenException(
-      validation.message,
-    );
+    throw new ForbiddenException(validation.message);
   }
 
   /**
@@ -95,30 +70,19 @@ export class ClassesResolver {
     req: Request,
     targetUserId: number,
   ): Promise<void> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     const isAdmin = role === 'admin';
 
-    const isViewingOwnClasses =
-      validation.userId === targetUserId;
+    const isViewingOwnClasses = validation.userId === targetUserId;
 
-    if (
-      !isAdmin &&
-      !isViewingOwnClasses
-    ) {
+    if (!isAdmin && !isViewingOwnClasses) {
       throw new ForbiddenException(
         'You do not have permission to view this user classes',
       );
@@ -133,80 +97,58 @@ export class ClassesResolver {
     req: Request,
     classId: number,
   ): Promise<void> {
-    const validation =
-      await verifyAuthenticatedUser(
-        req,
-        this.prisma,
-      );
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
-      throw new UnauthorizedException(
-        validation.message,
-      );
+      throw new UnauthorizedException(validation.message);
     }
 
-    const classItem =
-      await this.prisma.class.findUnique({
-        where: {
-          id: classId,
-        },
-        select: {
-          id: true,
-          createdById: true,
-        },
-      });
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        createdById: true,
+      },
+    });
 
     if (!classItem) {
-      throw new NotFoundException(
-        'Class is not found',
-      );
+      throw new NotFoundException('Class is not found');
     }
 
-    const role =
-      validation.role.toLowerCase();
+    const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
       return;
     }
 
     if (role !== 'teacher') {
-      throw new ForbiddenException(
-        'Admin or teacher role is required',
-      );
+      throw new ForbiddenException('Admin or teacher role is required');
     }
 
-    if (
-      classItem.createdById !==
-      validation.userId
-    ) {
+    if (classItem.createdById !== validation.userId) {
       throw new ForbiddenException(
         'Teacher can only manage classes they created',
       );
     }
   }
 
-/**
- * Admin được xem thành viên của mọi class.
- * Teacher hoặc Student chỉ được xem khi thuộc class đó.
- */
-private async assertCanViewClassMembers(
-  req: Request,
-  classId: number,
-): Promise<void> {
-  const validation =
-    await verifyAuthenticatedUser(
-      req,
-      this.prisma,
-    );
+  /**
+   * Admin được xem thành viên của mọi class.
+   * Teacher hoặc Student chỉ được xem khi thuộc class đó.
+   */
+  private async assertCanViewClassMembers(
+    req: Request,
+    classId: number,
+  ): Promise<void> {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
 
-  if (!validation.ok) {
-    throw new UnauthorizedException(
-      validation.message,
-    );
-  }
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
 
-  const classItem =
-    await this.prisma.class.findUnique({
+    const classItem = await this.prisma.class.findUnique({
       where: {
         id: classId,
       },
@@ -230,29 +172,25 @@ private async assertCanViewClassMembers(
       },
     });
 
-  if (!classItem) {
-    throw new NotFoundException(
-      'Class is not found',
-    );
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    const role = validation.role.toLowerCase();
+
+    if (role === 'admin') {
+      return;
+    }
+
+    const belongsToClass =
+      classItem.teachers.length > 0 || classItem.students.length > 0;
+
+    if (!belongsToClass) {
+      throw new ForbiddenException(
+        'You must belong to this class to view its members',
+      );
+    }
   }
-
-  const role =
-    validation.role.toLowerCase();
-
-  if (role === 'admin') {
-    return;
-  }
-
-  const belongsToClass =
-    classItem.teachers.length > 0 ||
-    classItem.students.length > 0;
-
-  if (!belongsToClass) {
-    throw new ForbiddenException(
-      'You must belong to this class to view its members',
-    );
-  }
-}
 
   /**
    * Admin hoặc Teacher tạo class.
@@ -263,13 +201,9 @@ private async assertCanViewClassMembers(
     createClassInput: CreateClassInput,
     @Context('req') req: Request,
   ) {
-    const currentUserId =
-      await this.assertAdminTeacher(req);
+    const currentUserId = await this.assertAdminTeacher(req);
 
-    return this.classesService.create(
-      createClassInput,
-      currentUserId,
-    );
+    return this.classesService.create(createClassInput, currentUserId);
   }
 
   /**
@@ -295,14 +229,9 @@ private async assertCanViewClassMembers(
     userId: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewUserClasses(
-      req,
-      userId,
-    );
+    await this.assertCanViewUserClasses(req, userId);
 
-    return this.classesService.findByUserId(
-      userId,
-    );
+    return this.classesService.findByUserId(userId);
   }
 
   /**
@@ -330,15 +259,9 @@ private async assertCanViewClassMembers(
     updateClassInput: UpdateClassInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageClass(
-      req,
-      updateClassInput.id,
-    );
+    await this.assertCanManageClass(req, updateClassInput.id);
 
-    return this.classesService.update(
-      updateClassInput.id,
-      updateClassInput,
-    );
+    return this.classesService.update(updateClassInput.id, updateClassInput);
   }
 
   /**
@@ -353,10 +276,7 @@ private async assertCanViewClassMembers(
     id: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageClass(
-      req,
-      id,
-    );
+    await this.assertCanManageClass(req, id);
 
     return this.classesService.remove(id);
   }
@@ -388,15 +308,9 @@ private async assertCanViewClassMembers(
     input: ManageClassMembersInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageClass(
-      req,
-      input.classId,
-    );
+    await this.assertCanManageClass(req, input.classId);
 
-    return this.classesService.addTeachersToClass(
-      input.classId,
-      input.userIds,
-    );
+    return this.classesService.addTeachersToClass(input.classId, input.userIds);
   }
 
   /**
@@ -409,15 +323,9 @@ private async assertCanViewClassMembers(
     input: ManageClassMembersInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageClass(
-      req,
-      input.classId,
-    );
+    await this.assertCanManageClass(req, input.classId);
 
-    return this.classesService.addStudentsToClass(
-      input.classId,
-      input.userIds,
-    );
+    return this.classesService.addStudentsToClass(input.classId, input.userIds);
   }
 
   /**
@@ -430,10 +338,7 @@ private async assertCanViewClassMembers(
     input: ManageClassMembersInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageClass(
-      req,
-      input.classId,
-    );
+    await this.assertCanManageClass(req, input.classId);
 
     return this.classesService.removeTeachersFromClass(
       input.classId,
@@ -451,10 +356,7 @@ private async assertCanViewClassMembers(
     input: ManageClassMembersInput,
     @Context('req') req: Request,
   ) {
-    await this.assertCanManageClass(
-      req,
-      input.classId,
-    );
+    await this.assertCanManageClass(req, input.classId);
 
     return this.classesService.removeStudentsFromClass(
       input.classId,
@@ -462,71 +364,57 @@ private async assertCanViewClassMembers(
     );
   }
   /**
- * Lấy danh sách Teacher theo classId.
- * Admin xem được mọi class.
- * Teacher/Student phải thuộc class.
- */
-@Query(() => [User], {
-  name: 'teachersByClassId',
-})
-async getTeachersByClassId(
-  @Args('classId', {
-    type: () => Int,
+   * Lấy danh sách Teacher theo classId.
+   * Admin xem được mọi class.
+   * Teacher/Student phải thuộc class.
+   */
+  @Query(() => [User], {
+    name: 'teachersByClassId',
   })
-  classId: number,
-  @Context('req') req: Request,
-) {
-  await this.assertCanViewClassMembers(
-    req,
-    classId,
-  );
+  async getTeachersByClassId(
+    @Args('classId', {
+      type: () => Int,
+    })
+    classId: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanViewClassMembers(req, classId);
 
-  return this.classesService.getTeachersByClassId(
-    classId,
-  );
-}
+    return this.classesService.getTeachersByClassId(classId);
+  }
 
-/**
- * Lấy danh sách Student theo classId.
- * Admin xem được mọi class.
- * Teacher/Student phải thuộc class.
- */
-@Query(() => [User], {
-  name: 'studentsByClassId',
-})
-async getStudentsByClassId(
-  @Args('classId', {
-    type: () => Int,
+  /**
+   * Lấy danh sách Student theo classId.
+   * Admin xem được mọi class.
+   * Teacher/Student phải thuộc class.
+   */
+  @Query(() => [User], {
+    name: 'studentsByClassId',
   })
-  classId: number,
-  @Context('req') req: Request,
-) {
-  await this.assertCanViewClassMembers(
-    req,
-    classId,
-  );
+  async getStudentsByClassId(
+    @Args('classId', {
+      type: () => Int,
+    })
+    classId: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanViewClassMembers(req, classId);
 
-  return this.classesService.getStudentsByClassId(
-    classId,
-  );
-}
-/**
- * Admin hoặc Teacher tìm Student theo tên hoặc email.
- */
-@Query(() => [User], {
-  name: 'searchStudents',
-})
-async searchStudents(
-  @Args('keyword', {
-    type: () => String,
+    return this.classesService.getStudentsByClassId(classId);
+  }
+  /**
+   * Admin hoặc Teacher tìm Student theo name hoặc email.
+   */
+  @Query(() => [User], {
+    name: 'searchStudents',
   })
-  keyword: string,
-  @Context('req') req: Request,
-) {
-  await this.assertAdminTeacher(req);
+  async searchStudents(
+    @Args('input')
+    input: SearchStudentsInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertAdminTeacher(req);
 
-  return this.classesService.searchStudents(
-    keyword,
-  );
-}
+    return this.classesService.searchStudents(input);
+  }
 }
