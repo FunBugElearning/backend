@@ -344,7 +344,7 @@ type Query {
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
-  attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
+  attendanceSessionsByClass(classId: Int!, page: Int, limit: Int, fromDate: String, toDate: String): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
   classGradebook(classId: Int!): ClassGradebook!
   myGrades(classId: Int!): StudentGradebook!
@@ -353,14 +353,6 @@ type Query {
 input SearchStudentsInput {
   name: String
   email: String
-}
-
-input GetAttendanceSessionsInput {
-  classId: Int!
-  page: Int = 1
-  limit: Int = 10
-  fromDate: DateTime
-  toDate: DateTime
 }
 
 type Mutation {
