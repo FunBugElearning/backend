@@ -11,9 +11,10 @@ import { AttendanceSession } from './entities/attendance-session.entity';
 import { AttendanceRecord } from './entities/attendance-record.entity';
 import { AttendanceSessionPagination } from './entities/attendance-session-pagination.entity';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
-import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
 import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
 import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.input';
+import { CreateAttendanceRecordsInput } from './dto/create-attendance-records.input';
+import { UpdateAttendanceRecordsInput } from './dto/update-attendance-records.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
 
@@ -349,17 +350,34 @@ export class AttendanceResolver {
 
   /**
    * Task 3:
-   * Bulk create/update attendance records.
+   * Create attendance records only.
+   * Nếu record đã tồn tại trong session thì báo lỗi.
    */
   @Mutation(() => [AttendanceRecord])
-  async bulkUpsertAttendanceRecords(
+  async createAttendanceRecords(
     @Args('input')
-    input: BulkUpsertAttendanceRecordsInput,
+    input: CreateAttendanceRecordsInput,
     @Context('req') req: Request,
   ) {
     await this.assertCanManageAttendanceSession(req, input.attendanceSessionId);
 
-    return this.attendanceService.bulkUpsertAttendanceRecords(input);
+    return this.attendanceService.createAttendanceRecords(input);
+  }
+
+  /**
+   * Task 3:
+   * Update attendance records only.
+   * Nếu record chưa tồn tại thì báo lỗi.
+   */
+  @Mutation(() => [AttendanceRecord])
+  async updateAttendanceRecords(
+    @Args('input')
+    input: UpdateAttendanceRecordsInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAttendanceSession(req, input.attendanceSessionId);
+
+    return this.attendanceService.updateAttendanceRecords(input);
   }
 
   /**
