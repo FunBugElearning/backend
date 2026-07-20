@@ -346,6 +346,7 @@ type Query {
   assignment(id: Int!): Assignment!
   attendanceSessionsByClass(classId: Int!, page: Int, limit: Int, fromDate: String, toDate: String): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
+  gradeCategoriesByClass(classId: Int!): [ClassGradeCategory!]!
   classGradebook(classId: Int!): ClassGradebook!
   myGrades(classId: Int!): StudentGradebook!
 }
