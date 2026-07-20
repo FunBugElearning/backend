@@ -9,9 +9,9 @@ import type { Request } from 'express';
 import { AssignmentsService } from './assignments.service';
 import { Assignment } from './entities/assignment.entity';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
+import { UpdateAssignmentInput } from './dto/update-assignment.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
-import { UpdateAssignmentInput } from './dto/update-assignment.input';
 
 @Resolver(() => Assignment)
 export class AssignmentsResolver {
@@ -20,10 +20,6 @@ export class AssignmentsResolver {
     private readonly prisma: PrismaService,
   ) {}
 
-  /**
-   * Admin được tạo assignment cho mọi class.
-   * Teacher chỉ được tạo assignment cho class mình đang dạy.
-   */
   private async assertCanManageAssignmentClass(
     req: Request,
     classId: number,
@@ -76,10 +72,6 @@ export class AssignmentsResolver {
     return validation.userId;
   }
 
-  /**
-   * Admin được update/delete mọi assignment.
-   * Teacher chỉ update/delete assignment của class mình đang dạy.
-   */
   private async assertCanManageAssignment(
     req: Request,
     assignmentId: number,
@@ -147,12 +139,66 @@ export class AssignmentsResolver {
     }
 
     const isAdmin = validation.role.toLowerCase() === 'admin';
-
     const isOwnData = validation.userId === targetUserId;
 
     if (!isAdmin && !isOwnData) {
       throw new ForbiddenException(
         'You do not have permission to view this user assignments',
+      );
+    }
+  }
+
+  private async assertCanViewAssignmentClass(
+    req: Request,
+    classId: number,
+  ): Promise<void> {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        teachers: {
+          where: {
+            id: validation.userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+        students: {
+          where: {
+            id: validation.userId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    const role = validation.role.toLowerCase();
+
+    if (role === 'admin') {
+      return;
+    }
+
+    const belongsToClass =
+      classItem.teachers.length > 0 || classItem.students.length > 0;
+
+    if (!belongsToClass) {
+      throw new ForbiddenException(
+        'You must belong to this class to view assignments',
       );
     }
   }
@@ -190,6 +236,21 @@ export class AssignmentsResolver {
     return this.assignmentsService.findByUserAndClass(userId, classId);
   }
 
+  @Query(() => [Assignment], {
+    name: 'assignmentsByClass',
+  })
+  async getAssignmentsByClass(
+    @Args('classId', {
+      type: () => Int,
+    })
+    classId: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanViewAssignmentClass(req, classId);
+
+    return this.assignmentsService.findByClassId(classId);
+  }
+
   @Query(() => Assignment, {
     name: 'assignment',
   })
@@ -212,10 +273,30 @@ export class AssignmentsResolver {
       validation.role,
     );
   }
-  /**
-   * Task 10:
-   * Update assignment.
-   */
+
+  @Query(() => Assignment, {
+    name: 'assignmentDetail',
+  })
+  async getAssignmentDetail(
+    @Args('assignmentId', {
+      type: () => Int,
+    })
+    assignmentId: number,
+    @Context('req') req: Request,
+  ) {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    return this.assignmentsService.findOne(
+      assignmentId,
+      validation.userId,
+      validation.role,
+    );
+  }
+
   @Mutation(() => Assignment)
   async updateAssignment(
     @Args('input')
@@ -227,11 +308,6 @@ export class AssignmentsResolver {
     return this.assignmentsService.update(input);
   }
 
-  /**
-   * Task 10:
-   * Delete assignment.
-   * Related submissions and grades are deleted by Prisma cascade.
-   */
   @Mutation(() => Assignment)
   async removeAssignment(
     @Args('id', {

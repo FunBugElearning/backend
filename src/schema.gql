@@ -343,7 +343,9 @@ type Query {
   roles: [Role!]!
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
+  assignmentsByClass(classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
+  assignmentDetail(assignmentId: Int!): Assignment!
   attendanceSessionsByClass(classId: Int!, page: Int, limit: Int, fromDate: String, toDate: String): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
   gradeCategoriesByClass(classId: Int!): [ClassGradeCategory!]!

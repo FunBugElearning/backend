@@ -4,9 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
 import { UpdateAssignmentInput } from './dto/update-assignment.input';
+
 @Injectable()
 export class AssignmentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -73,6 +75,39 @@ export class AssignmentsService {
         categoryId: createAssignmentInput.categoryId,
         maxScore,
         createdById,
+      },
+      include: {
+        class: true,
+        category: true,
+        createdBy: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findByClassId(classId: number) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    return this.prisma.assignment.findMany({
+      where: {
+        classId,
+      },
+      orderBy: {
+        deadline: 'asc',
       },
       include: {
         class: true,
@@ -198,6 +233,7 @@ export class AssignmentsService {
 
     return assignment;
   }
+
   async update(input: UpdateAssignmentInput) {
     const assignment = await this.prisma.assignment.findUnique({
       where: {
