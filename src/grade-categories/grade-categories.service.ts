@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,13 +11,7 @@ import { CreateGradeCategoryInput } from './dto/create-grade-category.input';
 export class GradeCategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createGradeCategory(input: CreateGradeCategoryInput) {
-    const name = input.name.trim();
-
-    if (!name) {
-      throw new BadRequestException('Category name is required');
-    }
-
+  async create(input: CreateGradeCategoryInput) {
     const classItem = await this.prisma.class.findUnique({
       where: {
         id: input.classId,
@@ -32,46 +25,78 @@ export class GradeCategoriesService {
       throw new NotFoundException('Class is not found');
     }
 
-    const existingCategory = await this.prisma.classGradeCategory.findFirst({
-      where: {
-        classId: input.classId,
-        name: {
-          equals: name,
-          mode: 'insensitive',
+    const existingCategory =
+      await this.prisma.classGradeCategory.findFirst({
+        where: {
+          classId: input.classId,
+          name: {
+            equals: input.name.trim(),
+            mode: 'insensitive',
+          },
         },
-      },
-    });
+      });
 
     if (existingCategory) {
-      throw new ConflictException(
+      throw new BadRequestException(
         'Grade category name already exists in this class',
       );
     }
 
-    const totalWeightResult = await this.prisma.classGradeCategory.aggregate({
-      where: {
-        classId: input.classId,
-      },
-      _sum: {
-        weight: true,
-      },
-    });
+    const existingCategories =
+      await this.prisma.classGradeCategory.findMany({
+        where: {
+          classId: input.classId,
+        },
+        select: {
+          weight: true,
+        },
+      });
 
-    const currentTotalWeight = totalWeightResult._sum.weight ?? 0;
+    const currentTotalWeight = existingCategories.reduce(
+      (sum, category) => sum + category.weight,
+      0,
+    );
 
-    const newTotalWeight = currentTotalWeight + input.weight;
+    const nextTotalWeight = currentTotalWeight + input.weight;
 
-    if (newTotalWeight > 100) {
+    if (nextTotalWeight > 100) {
       throw new BadRequestException(
-        `Total category weight cannot exceed 100. Current total is ${currentTotalWeight}`,
+        'Total grade category weight cannot exceed 100',
       );
     }
 
     return this.prisma.classGradeCategory.create({
       data: {
         classId: input.classId,
-        name,
+        name: input.name.trim(),
         weight: input.weight,
+      },
+      include: {
+        class: true,
+      },
+    });
+  }
+
+  async findByClassId(classId: number) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    return this.prisma.classGradeCategory.findMany({
+      where: {
+        classId,
+      },
+      orderBy: {
+        id: 'asc',
       },
       include: {
         class: true,

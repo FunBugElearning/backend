@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,8 @@ import { CreateAttendanceSessionInput } from './dto/create-attendance-session.in
 import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
 import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
 import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.input';
+import { CreateAttendanceRecordsInput } from './dto/create-attendance-records.input';
+import { UpdateAttendanceRecordsInput } from './dto/update-attendance-records.input';
 
 @Injectable()
 export class AttendanceService {
@@ -60,6 +63,11 @@ export class AttendanceService {
     });
   }
 
+  /**
+   * Old API: upsert create/update chung.
+   * Mình giữ lại tạm thời để tránh lỗi compile.
+   * Sau bước resolver mình sẽ không dùng mutation này nữa.
+   */
   async bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput) {
     if (input.records.length === 0) {
       throw new BadRequestException(
@@ -132,6 +140,202 @@ export class AttendanceService {
             studentId: record.studentId,
             status: record.status,
             note: record.note?.trim() || undefined,
+          },
+          include: {
+            student: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        }),
+      ),
+    );
+  }
+
+  async createAttendanceRecords(input: CreateAttendanceRecordsInput) {
+    if (input.records.length === 0) {
+      throw new BadRequestException('Records cannot be empty');
+    }
+
+    const studentIds = input.records.map((record) => record.studentId);
+    const uniqueStudentIds = [...new Set(studentIds)];
+
+    if (studentIds.length !== uniqueStudentIds.length) {
+      throw new BadRequestException('Duplicate studentId in request body');
+    }
+
+    const attendanceSession = await this.prisma.attendanceSession.findUnique({
+      where: {
+        id: input.attendanceSessionId,
+      },
+      include: {
+        class: {
+          include: {
+            students: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attendanceSession) {
+      throw new NotFoundException('Attendance session is not found');
+    }
+
+    const classStudentIds = new Set(
+      attendanceSession.class.students.map((student) => student.id),
+    );
+
+    const invalidStudentIds = uniqueStudentIds.filter(
+      (studentId) => !classStudentIds.has(studentId),
+    );
+
+    if (invalidStudentIds.length > 0) {
+      throw new BadRequestException(
+        `Student(s) ${invalidStudentIds.join(
+          ', ',
+        )} do not belong to this class`,
+      );
+    }
+
+    const existingRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        attendanceSessionId: input.attendanceSessionId,
+        studentId: {
+          in: uniqueStudentIds,
+        },
+      },
+      select: {
+        studentId: true,
+      },
+    });
+
+    if (existingRecords.length > 0) {
+      const existingStudentIds = existingRecords.map(
+        (record) => record.studentId,
+      );
+
+      throw new ConflictException(
+        `Attendance record already exists for student(s): ${existingStudentIds.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    return this.prisma.$transaction(
+      input.records.map((record) =>
+        this.prisma.attendanceRecord.create({
+          data: {
+            attendanceSessionId: input.attendanceSessionId,
+            studentId: record.studentId,
+            status: record.status,
+            note: record.note?.trim() || null,
+          },
+          include: {
+            student: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        }),
+      ),
+    );
+  }
+
+  async updateAttendanceRecords(input: UpdateAttendanceRecordsInput) {
+    if (input.records.length === 0) {
+      throw new BadRequestException('Records cannot be empty');
+    }
+
+    const studentIds = input.records.map((record) => record.studentId);
+    const uniqueStudentIds = [...new Set(studentIds)];
+
+    if (studentIds.length !== uniqueStudentIds.length) {
+      throw new BadRequestException('Duplicate studentId in request body');
+    }
+
+    const attendanceSession = await this.prisma.attendanceSession.findUnique({
+      where: {
+        id: input.attendanceSessionId,
+      },
+      include: {
+        class: {
+          include: {
+            students: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attendanceSession) {
+      throw new NotFoundException('Attendance session is not found');
+    }
+
+    const classStudentIds = new Set(
+      attendanceSession.class.students.map((student) => student.id),
+    );
+
+    const invalidStudentIds = uniqueStudentIds.filter(
+      (studentId) => !classStudentIds.has(studentId),
+    );
+
+    if (invalidStudentIds.length > 0) {
+      throw new BadRequestException(
+        `Student(s) ${invalidStudentIds.join(
+          ', ',
+        )} do not belong to this class`,
+      );
+    }
+
+    const existingRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        attendanceSessionId: input.attendanceSessionId,
+        studentId: {
+          in: uniqueStudentIds,
+        },
+      },
+      select: {
+        studentId: true,
+      },
+    });
+
+    const existingStudentIds = new Set(
+      existingRecords.map((record) => record.studentId),
+    );
+
+    const missingStudentIds = uniqueStudentIds.filter(
+      (studentId) => !existingStudentIds.has(studentId),
+    );
+
+    if (missingStudentIds.length > 0) {
+      throw new NotFoundException(
+        `Attendance record does not exist for student(s): ${missingStudentIds.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    return this.prisma.$transaction(
+      input.records.map((record) =>
+        this.prisma.attendanceRecord.update({
+          where: {
+            attendanceSessionId_studentId: {
+              attendanceSessionId: input.attendanceSessionId,
+              studentId: record.studentId,
+            },
+          },
+          data: {
+            status: record.status,
+            note: record.note?.trim() || null,
           },
           include: {
             student: {
