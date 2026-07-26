@@ -34,9 +34,6 @@ type User {
   """User Email"""
   email: String
 
-  """User Password"""
-  password: String!
-
   """User Date of Birth"""
   dateOfBirth: DateTime!
 
@@ -168,6 +165,51 @@ type Class {
   students: [User!]
 }
 
+type ClassPagination {
+  items: [Class!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type StudentSearchPagination {
+  items: [User!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+type Notification {
+  id: Int!
+  userId: Int!
+  type: NotificationType!
+  title: String!
+  body: String
+
+  """Frontend route to navigate to when clicked"""
+  link: String
+  read: Boolean!
+  createdAt: DateTime!
+}
+
+enum NotificationType {
+  enrollment
+  assignment_published
+  submission_received
+  submission_graded
+  attendance_updated
+}
+
+type NotificationPagination {
+  items: [Notification!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
 type ClassGradeCategory {
   id: Int!
   classId: Int!
@@ -206,6 +248,14 @@ type Assignment {
   """Maximum score"""
   maxScore: Float!
 
+  """
+  draft: only visible to admin/teacher. published: visible to students. closed: visible but not submittable.
+  """
+  status: AssignmentStatus!
+
+  """Whether a student may resubmit after their first submission"""
+  allowResubmit: Boolean!
+
   """Created by user ID"""
   createdById: Int
 
@@ -217,6 +267,12 @@ type Assignment {
   class: Class
   category: ClassGradeCategory
   createdBy: User
+}
+
+enum AssignmentStatus {
+  draft
+  published
+  closed
 }
 
 type AttendanceRecord {
@@ -280,17 +336,63 @@ type AttendanceSessionPagination {
   totalPages: Int!
 }
 
-type Submission {
-  id: Int!
-  assignmentId: Int!
+type AttendanceGridColumn {
+  sessionId: Int!
+  attendanceDate: DateTime!
+  title: String
+}
+
+type AttendanceGridCell {
+  sessionId: Int!
+
+  """null if not yet marked"""
+  recordId: Int
+
+  """null if not yet marked"""
+  status: AttendanceStatus
+  note: String
+}
+
+type AttendanceGridRow {
+  student: User!
+  cells: [AttendanceGridCell!]!
+}
+
+type AttendanceGrid {
+  classId: Int!
+  columns: [AttendanceGridColumn!]!
+  rows: [AttendanceGridRow!]!
+}
+
+type ClassAttendanceStatistics {
+  totalSessions: Int!
+  present: Int!
+  absent: Int!
+  late: Int!
+  excused: Int!
+  attendanceRate: Float!
+  classId: Int!
+}
+
+type StudentAttendanceStatistics {
+  totalSessions: Int!
+  present: Int!
+  absent: Int!
+  late: Int!
+  excused: Int!
+  attendanceRate: Float!
+  classId: Int!
   studentId: Int!
-  content: String
-  attachFiles: [String!]!
-  submittedAt: DateTime!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  assignment: Assignment
-  student: User
+}
+
+type StudentAttendanceHistoryEntry {
+  sessionId: Int!
+  attendanceDate: DateTime!
+  title: String
+
+  """null if not yet marked"""
+  status: AttendanceStatus
+  note: String
 }
 
 type Grade {
@@ -303,6 +405,31 @@ type Grade {
   updatedAt: DateTime!
   submission: Submission
   gradedBy: User
+}
+
+type Submission {
+  id: Int!
+  assignmentId: Int!
+  studentId: Int!
+  content: String
+  attachFiles: [String!]!
+  submittedAt: DateTime!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+
+  """
+  Server-derived: graded (has a Grade), late (submitted after the deadline), or submitted
+  """
+  status: SubmissionStatus!
+  assignment: Assignment
+  student: User
+  grade: Grade
+}
+
+enum SubmissionStatus {
+  submitted
+  late
+  graded
 }
 
 type GradebookCategoryScore {
@@ -327,32 +454,138 @@ type ClassGradebook {
   students: [StudentGradebook!]!
 }
 
+type RecentSubmissionActivity {
+  submissionId: Int!
+  studentName: String!
+  assignmentTitle: String!
+  classId: Int!
+  className: String!
+  submittedAt: DateTime!
+}
+
+type UpcomingAssignmentSummary {
+  assignmentId: Int!
+  title: String!
+  classId: Int!
+  className: String!
+  deadline: DateTime!
+}
+
+type DashboardAttendanceSummary {
+  totalSessions: Int!
+  present: Int!
+  absent: Int!
+  late: Int!
+  excused: Int!
+  attendanceRate: Float!
+}
+
+type AdminDashboard {
+  totalClasses: Int!
+  totalTeachers: Int!
+  totalStudents: Int!
+  totalAssignments: Int!
+  submissionCompletionRate: Float!
+  attendanceRate: Float!
+  recentActivity: [RecentSubmissionActivity!]!
+}
+
+type TeacherClassSummary {
+  classId: Int!
+  className: String!
+  studentCount: Int!
+}
+
+type TodayAttendanceStatus {
+  classId: Int!
+  className: String!
+  hasSessionToday: Boolean!
+}
+
+type TeacherDashboard {
+  classes: [TeacherClassSummary!]!
+  totalStudents: Int!
+  assignmentsAwaitingGrading: Int!
+  recentSubmissions: [RecentSubmissionActivity!]!
+  upcomingDeadlines: [UpcomingAssignmentSummary!]!
+  todayAttendance: [TodayAttendanceStatus!]!
+}
+
+type StudentClassSummary {
+  classId: Int!
+  className: String!
+  teacherNames: [String!]!
+}
+
+type RecentGrade {
+  assignmentId: Int!
+  assignmentTitle: String!
+  classId: Int!
+  className: String!
+  score: Float!
+  maxScore: Float!
+  gradedAt: DateTime!
+}
+
+type StudentDashboard {
+  classes: [StudentClassSummary!]!
+  upcomingAssignments: [UpcomingAssignmentSummary!]!
+  overdueAssignments: [UpcomingAssignmentSummary!]!
+  recentGrades: [RecentGrade!]!
+  attendance: DashboardAttendanceSummary!
+  latestNotifications: [Notification!]!
+}
+
 type Query {
   users: [User!]!
   user(id: Int!): User!
+  me: AuthUser!
   authSessions: [AuthSession!]!
   authSession(id: Int!): AuthSession!
   authAuditLogs: [AuthAuditLog!]!
   authAuditLog(id: Int!): AuthAuditLog!
-  classes: [Class!]!
+  classes(input: GetClassesInput): ClassPagination!
   classesByUserId(userId: Int!): [Class!]!
   class(id: Int!): Class!
   teachersByClassId(classId: Int!): [User!]!
   studentsByClassId(classId: Int!): [User!]!
-  searchStudents(input: SearchStudentsInput!): [User!]!
+  searchStudents(input: SearchStudentsInput!): StudentSearchPagination!
+  myNotifications(input: GetNotificationsInput): NotificationPagination!
+  unreadNotificationCount: Int!
   roles: [Role!]!
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
   attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
+  attendanceGrid(classId: Int!): AttendanceGrid!
+  classAttendanceStatistics(classId: Int!): ClassAttendanceStatistics!
+  myAttendanceStatistics(classId: Int!): StudentAttendanceStatistics!
+  myAttendanceHistory(classId: Int!): [StudentAttendanceHistoryEntry!]!
+  submissionsByAssignment(assignmentId: Int!): [Submission!]!
+  mySubmission(assignmentId: Int!): Submission
   classGradebook(classId: Int!): ClassGradebook!
   myGrades(classId: Int!): StudentGradebook!
+  adminDashboard: AdminDashboard!
+  teacherDashboard: TeacherDashboard!
+  studentDashboard: StudentDashboard!
+}
+
+input GetClassesInput {
+  page: Int = 1
+  limit: Int = 10
 }
 
 input SearchStudentsInput {
   name: String
   email: String
+  page: Int = 1
+  limit: Int = 10
+}
+
+input GetNotificationsInput {
+  page: Int = 1
+  limit: Int = 20
 }
 
 input GetAttendanceSessionsInput {
@@ -365,10 +598,14 @@ input GetAttendanceSessionsInput {
 
 type Mutation {
   createUser(createUserInput: CreateUserInput!): User!
+  createTeacher(createUserInput: CreateUserInput!): User!
+  createStudent(createUserInput: CreateUserInput!): User!
   updateUser(updateUserInput: UpdateUserInput!): User!
   removeUser(id: Int!): User!
   loginAuth(loginAuthInput: LoginAuthInput!): Auth!
   registerAuth(registerAuthInput: RegisterAuthInput!): Auth!
+  logout(refreshToken: String!): Boolean!
+  refreshToken(refreshToken: String!): Auth!
   createAuthSession: AuthSession!
   updateAuthSession(updateAuthSessionInput: UpdateAuthSessionInput!): AuthSession!
   removeAuthSession(id: Int!): AuthSession!
@@ -383,12 +620,15 @@ type Mutation {
   addStudentsToClass(input: ManageClassMembersInput!): Class!
   removeTeachersFromClass(input: ManageClassMembersInput!): Class!
   removeStudentsFromClass(input: ManageClassMembersInput!): Class!
+  markNotificationRead(id: Int!): Notification!
+  markAllNotificationsRead: Boolean!
   createRole(createRoleInput: CreateRoleInput!): Role!
   updateRole(updateRoleInput: UpdateRoleInput!): Role!
   removeRole(id: Int!): Role!
   createAssignment(createAssignmentInput: CreateAssignmentInput!): Assignment!
   updateAssignment(input: UpdateAssignmentInput!): Assignment!
   removeAssignment(id: Int!): Assignment!
+  publishAssignment(id: Int!): Assignment!
   createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
   bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
   updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
@@ -584,6 +824,8 @@ input CreateAssignmentInput {
   classId: Int!
   categoryId: Int
   maxScore: Float = 100
+  status: AssignmentStatus = draft
+  allowResubmit: Boolean = true
 }
 
 input UpdateAssignmentInput {
@@ -595,6 +837,8 @@ input UpdateAssignmentInput {
   attachFiles: [String!]
   categoryId: Int
   maxScore: Float
+  status: AssignmentStatus
+  allowResubmit: Boolean
 }
 
 input CreateAttendanceSessionInput {

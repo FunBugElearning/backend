@@ -1,13 +1,17 @@
 import { Field, Float, InputType, Int } from '@nestjs/graphql';
 import {
   IsArray,
-  IsDateString,
+  IsBoolean,
+  IsDate,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { AssignmentStatus } from '@prisma/client';
 
 @InputType()
 export class UpdateAssignmentInput {
@@ -29,11 +33,14 @@ export class UpdateAssignmentInput {
   @IsString()
   description?: string;
 
+  // See attendance/dto/create-attendance-session.input.ts for why @IsDate(),
+  // not @IsDateString().
   @Field(() => Date, {
     nullable: true,
   })
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   deadline?: Date;
 
   @Field(() => String, {
@@ -64,4 +71,18 @@ export class UpdateAssignmentInput {
   @IsNumber()
   @Min(0.01)
   maxScore?: number;
+
+  @Field(() => AssignmentStatus, {
+    nullable: true,
+  })
+  @IsOptional()
+  @IsEnum(AssignmentStatus)
+  status?: AssignmentStatus;
+
+  @Field(() => Boolean, {
+    nullable: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowResubmit?: boolean;
 }

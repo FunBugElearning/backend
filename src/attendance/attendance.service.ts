@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,10 +11,14 @@ import { CreateAttendanceSessionInput } from './dto/create-attendance-session.in
 import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
 import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
 import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.input';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async createAttendanceSession(
     input: CreateAttendanceSessionInput,
@@ -114,7 +119,7 @@ export class AttendanceService {
       );
     }
 
-    return this.prisma.$transaction(
+    const results = await this.prisma.$transaction(
       input.records.map((record) =>
         this.prisma.attendanceRecord.upsert({
           where: {
@@ -143,6 +148,16 @@ export class AttendanceService {
         }),
       ),
     );
+
+    await this.notificationsService.createMany(
+      uniqueStudentIds,
+      'attendance_updated',
+      'Your attendance has been recorded',
+      undefined,
+      `/classes/${attendanceSession.classId}/my-attendance`,
+    );
+
+    return results;
   }
 
   async getAttendanceSessionsByClass(input: GetAttendanceSessionsInput) {
@@ -267,6 +282,243 @@ export class AttendanceService {
     }
 
     return attendanceSession;
+  }
+
+  async getAttendanceGrid(classId: number) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        students: {
+          include: {
+            role: true,
+          },
+          orderBy: {
+            name: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    const sessions = await this.prisma.attendanceSession.findMany({
+      where: {
+        classId,
+      },
+      orderBy: {
+        attendanceDate: 'asc',
+      },
+    });
+
+    const sessionIds = sessions.map((session) => session.id);
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        attendanceSessionId: {
+          in: sessionIds,
+        },
+      },
+    });
+
+    const recordByStudentAndSession = new Map<
+      string,
+      (typeof records)[number]
+    >();
+
+    for (const record of records) {
+      recordByStudentAndSession.set(
+        `${record.studentId}:${record.attendanceSessionId}`,
+        record,
+      );
+    }
+
+    const columns = sessions.map((session) => ({
+      sessionId: session.id,
+      attendanceDate: session.attendanceDate,
+      title: session.title,
+    }));
+
+    const rows = classItem.students.map((student) => ({
+      student,
+      cells: sessions.map((session) => {
+        const record = recordByStudentAndSession.get(
+          `${student.id}:${session.id}`,
+        );
+
+        return {
+          sessionId: session.id,
+          recordId: record?.id ?? null,
+          status: record?.status ?? null,
+          note: record?.note ?? null,
+        };
+      }),
+    }));
+
+    return { classId, columns, rows };
+  }
+
+  // See .claude/DECISIONS.md ("Attendance percentage formula") for why excused
+  // is excluded from the denominator and late counts as attended.
+  private computeAttendanceStatistics(counts: {
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+  }) {
+    const attendedOrMissed = counts.present + counts.late + counts.absent;
+    const attendanceRate =
+      attendedOrMissed === 0
+        ? 0
+        : ((counts.present + counts.late) / attendedOrMissed) * 100;
+
+    return {
+      totalSessions:
+        counts.present + counts.absent + counts.late + counts.excused,
+      ...counts,
+      attendanceRate,
+    };
+  }
+
+  async getClassAttendanceStatistics(classId: number) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        attendanceSession: {
+          classId,
+        },
+      },
+      select: {
+        status: true,
+      },
+    });
+
+    const counts = { present: 0, absent: 0, late: 0, excused: 0 };
+
+    for (const record of records) {
+      counts[record.status] += 1;
+    }
+
+    return {
+      classId,
+      ...this.computeAttendanceStatistics(counts),
+    };
+  }
+
+  async getStudentAttendanceStatistics(classId: number, studentId: number) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentId,
+        attendanceSession: {
+          classId,
+        },
+      },
+      select: {
+        status: true,
+      },
+    });
+
+    const counts = { present: 0, absent: 0, late: 0, excused: 0 };
+
+    for (const record of records) {
+      counts[record.status] += 1;
+    }
+
+    return {
+      classId,
+      studentId,
+      ...this.computeAttendanceStatistics(counts),
+    };
+  }
+
+  async getStudentAttendanceHistory(classId: number, studentId: number) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+        students: {
+          where: {
+            id: studentId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    if (classItem.students.length === 0) {
+      throw new ForbiddenException('Student is not enrolled in this class');
+    }
+
+    const sessions = await this.prisma.attendanceSession.findMany({
+      where: {
+        classId,
+      },
+      orderBy: {
+        attendanceDate: 'asc',
+      },
+    });
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentId,
+        attendanceSessionId: {
+          in: sessions.map((session) => session.id),
+        },
+      },
+    });
+
+    const recordBySession = new Map(
+      records.map((record) => [record.attendanceSessionId, record]),
+    );
+
+    return sessions.map((session) => {
+      const record = recordBySession.get(session.id);
+
+      return {
+        sessionId: session.id,
+        attendanceDate: session.attendanceDate,
+        title: session.title,
+        status: record?.status ?? null,
+        note: record?.note ?? null,
+      };
+    });
   }
 
   async updateAttendanceRecord(input: UpdateAttendanceRecordInput) {

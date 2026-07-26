@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../prisma/prisma.service';
 import { AuthAuditLogsResolver } from './auth_audit_logs.resolver';
 import { AuthAuditLogsService } from './auth_audit_logs.service';
 
@@ -7,7 +8,18 @@ describe('AuthAuditLogsResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AuthAuditLogsResolver, AuthAuditLogsService],
+      providers: [
+        AuthAuditLogsResolver,
+        AuthAuditLogsService,
+        {
+          provide: PrismaService,
+          useValue: {
+            user: {
+              findUnique: jest.fn(),
+            },
+          },
+        },
+      ],
     }).compile();
 
     resolver = module.get<AuthAuditLogsResolver>(AuthAuditLogsResolver);

@@ -139,7 +139,7 @@ export class AssignmentsResolver {
   private async assertCanViewAssignments(
     req: Request,
     targetUserId: number,
-  ): Promise<void> {
+  ): Promise<string> {
     const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
@@ -155,6 +155,8 @@ export class AssignmentsResolver {
         'You do not have permission to view this user assignments',
       );
     }
+
+    return validation.role;
   }
 
   @Mutation(() => Assignment)
@@ -185,9 +187,9 @@ export class AssignmentsResolver {
     classId: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewAssignments(req, userId);
+    const role = await this.assertCanViewAssignments(req, userId);
 
-    return this.assignmentsService.findByUserAndClass(userId, classId);
+    return this.assignmentsService.findByUserAndClass(userId, classId, role);
   }
 
   @Query(() => Assignment, {
@@ -243,5 +245,22 @@ export class AssignmentsResolver {
     await this.assertCanManageAssignment(req, id);
 
     return this.assignmentsService.remove(id);
+  }
+
+  /**
+   * Publishes a draft assignment, making it visible to students. Same
+   * ownership rule as update/remove.
+   */
+  @Mutation(() => Assignment)
+  async publishAssignment(
+    @Args('id', {
+      type: () => Int,
+    })
+    id: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAssignment(req, id);
+
+    return this.assignmentsService.publish(id);
   }
 }
