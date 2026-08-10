@@ -32,15 +32,21 @@ export function validateEmail(email: string): boolean {
 
 export function validateDob(
   dateOfBirth: unknown,
-): { ok: true; value: Date } | { ok: false } {
+):
+  | { ok: true; value: Date }
+  | { ok: false; reason: 'invalid' | 'future' } {
   if (!dateOfBirth) {
-    return { ok: false };
+    return { ok: false, reason: 'invalid' };
   }
 
   const parsedDob = moment(dateOfBirth, moment.ISO_8601, true);
 
-  if (!parsedDob.isValid() || parsedDob.isAfter(moment())) {
-    return { ok: false };
+  if (!parsedDob.isValid()) {
+    return { ok: false, reason: 'invalid' };
+  }
+
+  if (parsedDob.isAfter(moment())) {
+    return { ok: false, reason: 'future' };
   }
 
   return { ok: true, value: parsedDob.toDate() };

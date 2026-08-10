@@ -153,7 +153,7 @@ export class AssignmentsResolver {
   private async assertCanViewAssignmentClass(
     req: Request,
     classId: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const validation = await verifyAuthenticatedUser(req, this.prisma);
 
     if (!validation.ok) {
@@ -192,17 +192,19 @@ export class AssignmentsResolver {
     const role = validation.role.toLowerCase();
 
     if (role === 'admin') {
-      return;
+      return true;
     }
 
-    const belongsToClass =
-      classItem.teachers.length > 0 || classItem.students.length > 0;
+    const isTeacherOfClass = classItem.teachers.length > 0;
+    const belongsToClass = isTeacherOfClass || classItem.students.length > 0;
 
     if (!belongsToClass) {
       throw new ForbiddenException(
         'You must belong to this class to view assignments',
       );
     }
+
+    return isTeacherOfClass;
   }
 
   @Mutation(() => Assignment)
@@ -248,9 +250,9 @@ export class AssignmentsResolver {
     classId: number,
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewAssignmentClass(req, classId);
+    const canSeeDrafts = await this.assertCanViewAssignmentClass(req, classId);
 
-    return this.assignmentsService.findByClassId(classId);
+    return this.assignmentsService.findByClassId(classId, canSeeDrafts);
   }
 
   @Query(() => Assignment, {

@@ -101,7 +101,10 @@ export function validateRegisterInput(
   if (!dobValidation.ok) {
     return {
       ok: false,
-      message: 'dateOfBirth is invalid. Use ISO date format (YYYY-MM-DD)',
+      message:
+        dobValidation.reason === 'future'
+          ? 'dateOfBirth cannot be in the future'
+          : 'dateOfBirth is invalid. Use ISO date format (YYYY-MM-DD)',
     };
   }
 
