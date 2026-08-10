@@ -555,8 +555,10 @@ type Query {
   roles: [Role!]!
   role(id: Int!): Role!
   assignmentsByUserAndClass(userId: Int!, classId: Int!): [Assignment!]!
+  assignmentsByClass(classId: Int!): [Assignment!]!
   assignment(id: Int!): Assignment!
-  attendanceSessionsByClass(input: GetAttendanceSessionsInput!): AttendanceSessionPagination!
+  assignmentDetail(assignmentId: Int!): Assignment!
+  attendanceSessionsByClass(classId: Int!, page: Int, limit: Int, fromDate: String, toDate: String): AttendanceSessionPagination!
   attendanceSessionDetail(attendanceSessionId: Int!): AttendanceSession!
   attendanceGrid(classId: Int!): AttendanceGrid!
   classAttendanceStatistics(classId: Int!): ClassAttendanceStatistics!
@@ -564,6 +566,7 @@ type Query {
   myAttendanceHistory(classId: Int!): [StudentAttendanceHistoryEntry!]!
   submissionsByAssignment(assignmentId: Int!): [Submission!]!
   mySubmission(assignmentId: Int!): Submission
+  gradeCategoriesByClass(classId: Int!): [ClassGradeCategory!]!
   classGradebook(classId: Int!): ClassGradebook!
   myGrades(classId: Int!): StudentGradebook!
   adminDashboard: AdminDashboard!
@@ -586,14 +589,6 @@ input SearchStudentsInput {
 input GetNotificationsInput {
   page: Int = 1
   limit: Int = 20
-}
-
-input GetAttendanceSessionsInput {
-  classId: Int!
-  page: Int = 1
-  limit: Int = 10
-  fromDate: DateTime
-  toDate: DateTime
 }
 
 type Mutation {
@@ -630,7 +625,8 @@ type Mutation {
   removeAssignment(id: Int!): Assignment!
   publishAssignment(id: Int!): Assignment!
   createAttendanceSession(input: CreateAttendanceSessionInput!): AttendanceSession!
-  bulkUpsertAttendanceRecords(input: BulkUpsertAttendanceRecordsInput!): [AttendanceRecord!]!
+  createAttendanceRecords(input: CreateAttendanceRecordsInput!): [AttendanceRecord!]!
+  updateAttendanceRecords(input: UpdateAttendanceRecordsInput!): [AttendanceRecord!]!
   updateAttendanceRecord(input: UpdateAttendanceRecordInput!): AttendanceRecord!
   createGradeCategory(input: CreateGradeCategoryInput!): ClassGradeCategory!
   submitAssignment(input: SubmitAssignmentInput!): Submission!
@@ -848,12 +844,23 @@ input CreateAttendanceSessionInput {
   description: String
 }
 
-input BulkUpsertAttendanceRecordsInput {
+input CreateAttendanceRecordsInput {
   attendanceSessionId: Int!
-  records: [AttendanceRecordInput!]!
+  records: [CreateAttendanceRecordItemInput!]!
 }
 
-input AttendanceRecordInput {
+input CreateAttendanceRecordItemInput {
+  studentId: Int!
+  status: AttendanceStatus!
+  note: String
+}
+
+input UpdateAttendanceRecordsInput {
+  attendanceSessionId: Int!
+  records: [UpdateAttendanceRecordItemInput!]!
+}
+
+input UpdateAttendanceRecordItemInput {
   studentId: Int!
   status: AttendanceStatus!
   note: String

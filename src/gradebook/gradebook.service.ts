@@ -3,7 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { PrismaService } from 'src/prisma/prisma.service';
+
 @Injectable()
 export class GradebookService {
   constructor(private readonly prisma: PrismaService) {}
@@ -63,7 +65,9 @@ export class GradebookService {
             const score = submission?.grade?.score ?? 0;
 
             const percent =
-              assignment.maxScore > 0 ? (score / assignment.maxScore) * 100 : 0;
+              assignment.maxScore > 0
+                ? (score / assignment.maxScore) * 100
+                : 0;
 
             return sum + percent;
           }, 0);
@@ -102,6 +106,7 @@ export class GradebookService {
       students,
     };
   }
+
   async getStudentOwnGrades(classId: number, studentId: number) {
     const classItem = await this.prisma.class.findUnique({
       where: {
@@ -165,7 +170,9 @@ export class GradebookService {
           const score = submission?.grade?.score ?? 0;
 
           const percent =
-            assignment.maxScore > 0 ? (score / assignment.maxScore) * 100 : 0;
+            assignment.maxScore > 0
+              ? (score / assignment.maxScore) * 100
+              : 0;
 
           return sum + percent;
         }, 0);

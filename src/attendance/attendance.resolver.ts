@@ -17,9 +17,9 @@ import {
 } from './entities/attendance-statistics.entity';
 import { StudentAttendanceHistoryEntry } from './entities/student-attendance-history-entry.entity';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
-import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
-import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
 import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.input';
+import { CreateAttendanceRecordsInput } from './dto/create-attendance-records.input';
+import { UpdateAttendanceRecordsInput } from './dto/update-attendance-records.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
 
@@ -30,10 +30,6 @@ export class AttendanceResolver {
     private readonly prisma: PrismaService,
   ) {}
 
-  /**
-   * Admin được tạo attendance session cho mọi class.
-   * Teacher chỉ được tạo attendance session cho class mình đang dạy.
-   */
   private async assertCanManageAttendanceClass(
     req: Request,
     classId: number,
@@ -86,10 +82,6 @@ export class AttendanceResolver {
     return validation.userId;
   }
 
-  /**
-   * Admin được quản lý mọi attendance session.
-   * Teacher chỉ được quản lý session của class mình đang dạy.
-   */
   private async assertCanManageAttendanceSession(
     req: Request,
     attendanceSessionId: number,
@@ -147,10 +139,6 @@ export class AttendanceResolver {
     return validation.userId;
   }
 
-  /**
-   * Admin được update mọi attendance record.
-   * Teacher chỉ được update record của class mình đang dạy.
-   */
   private async assertCanManageAttendanceRecord(
     req: Request,
     attendanceRecordId: number,
@@ -212,10 +200,6 @@ export class AttendanceResolver {
     return validation.userId;
   }
 
-  /**
-   * Admin xem được mọi class.
-   * Teacher/Student chỉ xem attendance của class mình thuộc về.
-   */
   private async assertCanViewAttendanceClass(
     req: Request,
     classId: number,
@@ -271,10 +255,6 @@ export class AttendanceResolver {
     }
   }
 
-  /**
-   * Admin xem được mọi attendance session.
-   * Teacher/Student chỉ xem session của class mình thuộc về.
-   */
   private async assertCanViewAttendanceSession(
     req: Request,
     attendanceSessionId: number,
@@ -335,10 +315,6 @@ export class AttendanceResolver {
     }
   }
 
-  /**
-   * Task 2:
-   * Create attendance session for class.
-   */
   @Mutation(() => AttendanceSession)
   async createAttendanceSession(
     @Args('input')
@@ -353,42 +329,74 @@ export class AttendanceResolver {
     return this.attendanceService.createAttendanceSession(input, currentUserId);
   }
 
-  /**
-   * Task 3:
-   * Bulk create/update attendance records.
-   */
   @Mutation(() => [AttendanceRecord])
-  async bulkUpsertAttendanceRecords(
+  async createAttendanceRecords(
     @Args('input')
-    input: BulkUpsertAttendanceRecordsInput,
+    input: CreateAttendanceRecordsInput,
     @Context('req') req: Request,
   ) {
     await this.assertCanManageAttendanceSession(req, input.attendanceSessionId);
 
-    return this.attendanceService.bulkUpsertAttendanceRecords(input);
+    return this.attendanceService.createAttendanceRecords(input);
   }
 
-  /**
-   * Task 4:
-   * Get attendance sessions by class with pagination/filter/counts.
-   */
+  @Mutation(() => [AttendanceRecord])
+  async updateAttendanceRecords(
+    @Args('input')
+    input: UpdateAttendanceRecordsInput,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAttendanceSession(req, input.attendanceSessionId);
+
+    return this.attendanceService.updateAttendanceRecords(input);
+  }
+
   @Query(() => AttendanceSessionPagination, {
     name: 'attendanceSessionsByClass',
   })
   async getAttendanceSessionsByClass(
-    @Args('input')
-    input: GetAttendanceSessionsInput,
+    @Args('classId', {
+      type: () => Int,
+    })
+    classId: number,
+
+    @Args('page', {
+      type: () => Int,
+      nullable: true,
+    })
+    page: number | undefined,
+
+    @Args('limit', {
+      type: () => Int,
+      nullable: true,
+    })
+    limit: number | undefined,
+
+    @Args('fromDate', {
+      type: () => String,
+      nullable: true,
+    })
+    fromDate: string | undefined,
+
+    @Args('toDate', {
+      type: () => String,
+      nullable: true,
+    })
+    toDate: string | undefined,
+
     @Context('req') req: Request,
   ) {
-    await this.assertCanViewAttendanceClass(req, input.classId);
+    await this.assertCanViewAttendanceClass(req, classId);
 
-    return this.attendanceService.getAttendanceSessionsByClass(input);
+    return this.attendanceService.getAttendanceSessionsByClass({
+      classId,
+      page,
+      limit,
+      fromDate: fromDate ? new Date(fromDate) : undefined,
+      toDate: toDate ? new Date(toDate) : undefined,
+    });
   }
 
-  /**
-   * Task 5:
-   * Get detail attendance session with students statuses/notes.
-   */
   @Query(() => AttendanceSession, {
     name: 'attendanceSessionDetail',
   })
@@ -406,10 +414,6 @@ export class AttendanceResolver {
     );
   }
 
-  /**
-   * Task 6:
-   * Update one attendance record.
-   */
   @Mutation(() => AttendanceRecord)
   async updateAttendanceRecord(
     @Args('input')
