@@ -1,13 +1,17 @@
 import { Field, Float, InputType, Int } from '@nestjs/graphql';
 import {
   IsArray,
-  IsDateString,
+  IsBoolean,
+  IsDate,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { AssignmentStatus } from '@prisma/client';
 
 @InputType()
 export class CreateAssignmentInput {
@@ -22,8 +26,11 @@ export class CreateAssignmentInput {
   @IsString()
   description?: string;
 
+  // See attendance/dto/create-attendance-session.input.ts for why @IsDate(),
+  // not @IsDateString().
   @Field(() => Date)
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   deadline: Date;
 
   @Field(() => String, {
@@ -59,4 +66,22 @@ export class CreateAssignmentInput {
   @IsNumber()
   @Min(0.01)
   maxScore?: number;
+
+  // Omitted or 'draft' -> not visible to students until publishAssignment is
+  // called. Passing 'published' here publishes immediately at creation time.
+  @Field(() => AssignmentStatus, {
+    nullable: true,
+    defaultValue: 'draft',
+  })
+  @IsOptional()
+  @IsEnum(AssignmentStatus)
+  status?: AssignmentStatus;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    defaultValue: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowResubmit?: boolean;
 }

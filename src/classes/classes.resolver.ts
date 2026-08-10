@@ -8,10 +8,13 @@ import type { Request } from 'express';
 
 import { ClassesService } from './classes.service';
 import { Class } from './entities/class.entity';
+import { ClassPagination } from './entities/class-pagination.entity';
+import { StudentSearchPagination } from './entities/student-search-pagination.entity';
 import { CreateClassInput } from './dto/create-class.input';
 import { UpdateClassInput } from './dto/update-class.input';
 import { AssignClassesToTeacherInput } from './dto/assign-classes-to-teacher.input';
 import { ManageClassMembersInput } from './dto/manage-class-members.input';
+import { GetClassesInput } from './dto/get-classes.input';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   verifyAdminRole,
@@ -207,13 +210,22 @@ export class ClassesResolver {
   }
 
   /**
-   * Lấy tất cả class.
+   * Lấy tất cả class (phân trang). Yêu cầu đăng nhập.
    */
-  @Query(() => [Class], {
+  @Query(() => ClassPagination, {
     name: 'classes',
   })
-  findAll() {
-    return this.classesService.findAll();
+  async findAll(
+    @Context('req') req: Request,
+    @Args('input', { nullable: true }) input?: GetClassesInput,
+  ) {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    return this.classesService.findAll(input?.page, input?.limit);
   }
 
   /**
@@ -235,17 +247,24 @@ export class ClassesResolver {
   }
 
   /**
-   * Lấy chi tiết class.
+   * Lấy chi tiết class. Yêu cầu đăng nhập.
    */
   @Query(() => Class, {
     name: 'class',
   })
-  findOne(
+  async findOne(
     @Args('id', {
       type: () => Int,
     })
     id: number,
+    @Context('req') req: Request,
   ) {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
     return this.classesService.findOne(id);
   }
 
@@ -403,9 +422,9 @@ export class ClassesResolver {
     return this.classesService.getStudentsByClassId(classId);
   }
   /**
-   * Admin hoặc Teacher tìm Student theo name hoặc email.
+   * Admin hoặc Teacher tìm Student theo name hoặc email (phân trang).
    */
-  @Query(() => [User], {
+  @Query(() => StudentSearchPagination, {
     name: 'searchStudents',
   })
   async searchStudents(

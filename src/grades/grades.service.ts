@@ -6,10 +6,14 @@ import {
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GradeSubmissionInput } from './dto/grade-submission.input';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class GradesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async gradeSubmission(input: GradeSubmissionInput, gradedById: number) {
     const submission = await this.prisma.submission.findUnique({
@@ -41,7 +45,7 @@ export class GradesService {
       );
     }
 
-    return this.prisma.grade.upsert({
+    const grade = await this.prisma.grade.upsert({
       where: {
         submissionId: input.submissionId,
       },
@@ -84,5 +88,15 @@ export class GradesService {
         },
       },
     });
+
+    await this.notificationsService.create(
+      submission.student.id,
+      'submission_graded',
+      `Your submission for ${submission.assignment.title} was graded`,
+      undefined,
+      `/classes/${submission.assignment.classId}/assignments`,
+    );
+
+    return grade;
   }
 }

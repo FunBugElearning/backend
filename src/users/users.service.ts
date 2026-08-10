@@ -42,6 +42,51 @@ export class UsersService {
     }
   }
 
+  // Convenience wrappers around `create` for the admin "create teacher"/
+  // "create student" workflows: the role is fixed by which mutation is
+  // called, not by any role_id the client sends, so the frontend doesn't
+  // need to look up role IDs first.
+  async createTeacher(createUserInput: CreateUserInput) {
+    return this.createWithRoleName(createUserInput, 'teacher');
+  }
+
+  async createStudent(createUserInput: CreateUserInput) {
+    return this.createWithRoleName(createUserInput, 'student');
+  }
+
+  private async createWithRoleName(
+    createUserInput: CreateUserInput,
+    roleName: 'teacher' | 'student',
+  ) {
+    try {
+      const { role_id, ...data } = createUserInput;
+      void role_id;
+
+      const resolvedRoleId = await this.resolveRoleIdByName(roleName);
+
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: createUserInput.email },
+      });
+
+      if (existingUser) {
+        throw new ServiceUnavailableException('Email is already in use');
+      }
+
+      const hashedPassword = await hashPassword(createUserInput.password);
+
+      return this.prisma.user.create({
+        data: {
+          ...data,
+          password: hashedPassword,
+          role: { connect: { id: resolvedRoleId } },
+        },
+        include: { role: true },
+      });
+    } catch (error) {
+      this.handleServiceError(`Error creating ${roleName}`, error);
+    }
+  }
+
   async findAll() {
     try {
       const users = await this.prisma.user.findMany({
@@ -125,6 +170,23 @@ export class UsersService {
     });
 
     return studentRole.id;
+  }
+
+  private async resolveRoleIdByName(
+    name: 'teacher' | 'student',
+  ): Promise<number> {
+    const descriptions: Record<'teacher' | 'student', string> = {
+      teacher: 'Teacher role',
+      student: 'Default student role',
+    };
+
+    const role = await this.prisma.role.upsert({
+      where: { name },
+      update: {},
+      create: { name, description: descriptions[name] },
+    });
+
+    return role.id;
   }
 
   private handleServiceError(message: string, error: unknown): never {

@@ -1,5 +1,6 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
+import { IsDate, IsInt, IsOptional, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class GetAttendanceSessionsInput {
@@ -25,17 +26,20 @@ export class GetAttendanceSessionsInput {
   @Min(1)
   limit?: number;
 
+  // See create-attendance-session.input.ts for why @IsDate(), not @IsDateString().
   @Field(() => Date, {
     nullable: true,
   })
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   fromDate?: Date;
 
   @Field(() => Date, {
     nullable: true,
   })
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   toDate?: Date;
 }

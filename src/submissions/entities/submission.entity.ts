@@ -1,6 +1,17 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { Assignment } from 'src/assignments/entities/assignment.entity';
 import { User } from 'src/users/entities/user.entity';
+import { Grade } from 'src/grades/entities/grade.entity';
+
+export enum SubmissionStatus {
+  submitted = 'submitted',
+  late = 'late',
+  graded = 'graded',
+}
+
+registerEnumType(SubmissionStatus, {
+  name: 'SubmissionStatus',
+});
 
 @ObjectType()
 export class Submission {
@@ -30,6 +41,12 @@ export class Submission {
   @Field(() => Date)
   updatedAt: Date;
 
+  @Field(() => SubmissionStatus, {
+    description:
+      'Server-derived: graded (has a Grade), late (submitted after the deadline), or submitted',
+  })
+  status: SubmissionStatus;
+
   @Field(() => Assignment, {
     nullable: true,
   })
@@ -39,4 +56,9 @@ export class Submission {
     nullable: true,
   })
   student?: User;
+
+  @Field(() => Grade, {
+    nullable: true,
+  })
+  grade?: Grade;
 }

@@ -9,10 +9,14 @@ import { Prisma } from '@prisma/client';
 import { CreateClassInput } from './dto/create-class.input';
 import { UpdateClassInput } from './dto/update-class.input';
 import { SearchStudentsInput } from './dto/search-students.input';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class ClassesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   create(createClassInput: CreateClassInput, createdById: number) {
     const { name, description, teacherIds, studentIds } = createClassInput;
@@ -37,14 +41,30 @@ export class ClassesService {
     });
   }
 
-  findAll() {
-    return this.prisma.class.findMany({
-      include: {
-        teachers: true,
-        students: true,
-        createdBy: true,
-      },
-    });
+  async findAll(page = 1, limit = 10) {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.class.findMany({
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          teachers: true,
+          students: true,
+          createdBy: true,
+        },
+      }),
+      this.prisma.class.count(),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   findOne(id: number) {
@@ -368,7 +388,7 @@ export class ClassesService {
       'add',
     );
 
-    return this.prisma.class.update({
+    const updatedClass = await this.prisma.class.update({
       where: {
         id: classId,
       },
@@ -385,6 +405,16 @@ export class ClassesService {
         createdBy: true,
       },
     });
+
+    await this.notificationsService.createMany(
+      validStudentIds,
+      'enrollment',
+      `You have been enrolled in ${updatedClass.name}`,
+      undefined,
+      `/classes/${classId}`,
+    );
+
+    return updatedClass;
   }
 
   async removeTeachersFromClass(classId: number, teacherIds: number[]) {
@@ -491,6 +521,9 @@ export class ClassesService {
       throw new BadRequestException('Name or email is required');
     }
 
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 10;
+
     const searchConditions: Prisma.UserWhereInput[] = [];
     if (name) {
       searchConditions.push({
@@ -510,24 +543,39 @@ export class ClassesService {
       });
     }
 
-    return this.prisma.user.findMany({
-      where: {
-        role: {
-          is: {
-            name: {
-              equals: 'student',
-              mode: 'insensitive',
-            },
+    const where: Prisma.UserWhereInput = {
+      role: {
+        is: {
+          name: {
+            equals: 'student',
+            mode: 'insensitive',
           },
         },
-        OR: searchConditions,
       },
-      include: {
-        role: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+      OR: searchConditions,
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        include: {
+          role: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 }

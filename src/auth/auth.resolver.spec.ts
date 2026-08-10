@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../prisma/prisma.service';
 import { AuthResolver } from './auth.resolver';
 import { AuthService } from './auth.service';
 
@@ -14,6 +15,16 @@ describe('AuthResolver', () => {
           useValue: {
             login: jest.fn(),
             register: jest.fn(),
+            logout: jest.fn(),
+            refreshSession: jest.fn(),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            user: {
+              findUniqueOrThrow: jest.fn(),
+            },
           },
         },
       ],

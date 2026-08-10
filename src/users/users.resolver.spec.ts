@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../prisma/prisma.service';
 import { UsersResolver } from './users.resolver';
 import { UsersService } from './users.service';
 
@@ -17,6 +18,14 @@ describe('UsersResolver', () => {
             findOne: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            user: {
+              findUnique: jest.fn(),
+            },
           },
         },
       ],

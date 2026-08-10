@@ -1,5 +1,6 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsInt, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateAttendanceSessionInput {
@@ -7,8 +8,12 @@ export class CreateAttendanceSessionInput {
   @IsInt()
   classId: number;
 
+  // Note: the GraphQL Date scalar already parses the wire value into a
+  // native Date before class-validator sees it, so this must be @IsDate(),
+  // not @IsDateString() (which expects a raw string and would always fail).
   @Field(() => Date)
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   attendanceDate: Date;
 
   @Field(() => String, {

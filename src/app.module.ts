@@ -17,6 +17,8 @@ import { GradeCategoriesModule } from './grade-categories/grade-categories.modul
 import { SubmissionsModule } from './submissions/submissions.module';
 import { GradesModule } from './grades/grades.module';
 import { GradebookModule } from './gradebook/gradebook.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { GradebookModule } from './gradebook/gradebook.module';
     SubmissionsModule,
     GradesModule,
     GradebookModule,
+    NotificationsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

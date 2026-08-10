@@ -13,6 +13,20 @@ enum AttendanceStatus {
   excused
 }
 
+enum AssignmentStatus {
+  draft
+  published
+  closed
+}
+
+enum NotificationType {
+  enrollment
+  assignment_published
+  submission_received
+  submission_graded
+  attendance_updated
+}
+
 model User {
   id                        Int                 @id @default(autoincrement())
   name                      String
@@ -34,6 +48,7 @@ model User {
   assignmentsCreated        Assignment[]        @relation("AssignmentCreator")
   submissions               Submission[]        @relation("StudentSubmissions")
   gradesGiven               Grade[]             @relation("GradesGiven")
+  notifications             Notification[]      @relation("UserNotifications")
 
   role Role @relation(fields: [role_id], references: [id])
 
@@ -99,18 +114,24 @@ model Class {
 }
 
 model Assignment {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  deadline    DateTime
-  topic       String?
-  attachFiles String[] @default([])
-  classId     Int
-  categoryId  Int?
-  maxScore    Float    @default(100)
-  createdById Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int              @id @default(autoincrement())
+  title         String
+  description   String?
+  deadline      DateTime
+  topic         String?
+  attachFiles   String[]         @default([])
+  classId       Int
+  categoryId    Int?
+  maxScore      Float            @default(100)
+  createdById   Int?
+  // Existing rows (and anything created without an explicit status) default
+  // to published so nothing already-visible silently disappears; the
+  // service layer defaults *newly created* assignments to draft unless the
+  // caller explicitly asks to publish. See .claude/DECISIONS.md.
+  status        AssignmentStatus @default(published)
+  allowResubmit Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   class       Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
   category    ClassGradeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -209,4 +230,24 @@ model Grade {
 
   @@index([gradedById])
   @@map("grades")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  body      String?
+  // Ready-to-use frontend path (e.g. "/classes/5/assignments"), not a
+  // generic resourceType/resourceId pair — simpler for the frontend to
+  // consume directly, and this app has few enough notification shapes that
+  // the extra indirection isn't worth it.
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
 }

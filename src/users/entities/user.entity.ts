@@ -14,7 +14,8 @@ export class User {
   @IsEmail()
   email: string;
 
-  @Field(() => String, { description: 'User Password' })
+  // Intentionally not a GraphQL @Field: the bcrypt hash must never be exposed
+  // over the API, even to admins.
   password: string;
 
   @Field(() => Date, { description: 'User Date of Birth' })

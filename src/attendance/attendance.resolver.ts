@@ -10,6 +10,12 @@ import { AttendanceService } from './attendance.service';
 import { AttendanceSession } from './entities/attendance-session.entity';
 import { AttendanceRecord } from './entities/attendance-record.entity';
 import { AttendanceSessionPagination } from './entities/attendance-session-pagination.entity';
+import { AttendanceGrid } from './entities/attendance-grid.entity';
+import {
+  ClassAttendanceStatistics,
+  StudentAttendanceStatistics,
+} from './entities/attendance-statistics.entity';
+import { StudentAttendanceHistoryEntry } from './entities/student-attendance-history-entry.entity';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
 import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.input';
 import { CreateAttendanceRecordsInput } from './dto/create-attendance-records.input';
@@ -417,5 +423,84 @@ export class AttendanceResolver {
     await this.assertCanManageAttendanceRecord(req, input.attendanceRecordId);
 
     return this.attendanceService.updateAttendanceRecord(input);
+  }
+
+  /**
+   * Full students x sessions x status grid for one class, in one round trip.
+   * Admin sees any class; teacher must teach the class. Deliberately NOT
+   * open to students — the grid exposes every classmate's attendance, which
+   * students must not see (they get `myAttendanceHistory`/
+   * `myAttendanceStatistics` instead).
+   */
+  @Query(() => AttendanceGrid, { name: 'attendanceGrid' })
+  async getAttendanceGrid(
+    @Args('classId', { type: () => Int }) classId: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAttendanceClass(req, classId);
+
+    return this.attendanceService.getAttendanceGrid(classId);
+  }
+
+  /**
+   * Class-wide attendance percentage. Admin or the class's own teacher only
+   * — same visibility rule as the grid.
+   */
+  @Query(() => ClassAttendanceStatistics, {
+    name: 'classAttendanceStatistics',
+  })
+  async getClassAttendanceStatistics(
+    @Args('classId', { type: () => Int }) classId: number,
+    @Context('req') req: Request,
+  ) {
+    await this.assertCanManageAttendanceClass(req, classId);
+
+    return this.attendanceService.getClassAttendanceStatistics(classId);
+  }
+
+  /**
+   * The calling student's own attendance percentage for a class. studentId
+   * is always taken from the verified token, never a client argument.
+   */
+  @Query(() => StudentAttendanceStatistics, {
+    name: 'myAttendanceStatistics',
+  })
+  async getMyAttendanceStatistics(
+    @Args('classId', { type: () => Int }) classId: number,
+    @Context('req') req: Request,
+  ) {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    return this.attendanceService.getStudentAttendanceStatistics(
+      classId,
+      validation.userId,
+    );
+  }
+
+  /**
+   * The calling student's own per-session attendance history for a class.
+   * studentId is always taken from the verified token.
+   */
+  @Query(() => [StudentAttendanceHistoryEntry], {
+    name: 'myAttendanceHistory',
+  })
+  async getMyAttendanceHistory(
+    @Args('classId', { type: () => Int }) classId: number,
+    @Context('req') req: Request,
+  ) {
+    const validation = await verifyAuthenticatedUser(req, this.prisma);
+
+    if (!validation.ok) {
+      throw new UnauthorizedException(validation.message);
+    }
+
+    return this.attendanceService.getStudentAttendanceHistory(
+      classId,
+      validation.userId,
+    );
   }
 }

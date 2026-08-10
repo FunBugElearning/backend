@@ -6,7 +6,11 @@ import { RegisterAuthInput } from './dto/register-auth.input';
 import { logger } from 'src/helper/logger';
 import { comparePassword, hashPassword } from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { signAccessToken, signRefreshToken } from 'src/utils/jwt_session.utils';
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from 'src/utils/jwt_session.utils';
 import {
   validateLoginInput,
   validateRegisterInput,
@@ -58,16 +62,20 @@ export class AuthService {
         };
       }
 
+      const jti = randomUUID();
+
       const accessToken = signAccessToken({
         userId: user.id,
         name: user.name,
         email: user.email,
+        jti,
       });
 
       const refreshToken = signRefreshToken({
         userId: user.id,
         name: user.name,
         email: user.email,
+        jti,
       });
 
       const hashedRefreshToken = await hashPassword(refreshToken);
@@ -91,7 +99,7 @@ export class AuthService {
           revoked_at: null,
           created_at: now,
           family_id: randomUUID(),
-          jti: randomUUID(),
+          jti,
         },
       });
 
@@ -129,7 +137,7 @@ export class AuthService {
         };
       }
 
-      const { name, email, password, dateOfBirth, address, phoneNumber, role } =
+      const { name, email, password, dateOfBirth, address, phoneNumber } =
         validation.data;
 
       const existingUser = await this.prisma.user.findUnique({
@@ -147,7 +155,10 @@ export class AuthService {
 
       const hashedPassword = await hashPassword(password);
 
-      const roleId = await this.resolveRoleId(role);
+      // Public registration must never honor a client-supplied role — it always
+      // creates a student account. Admin/teacher accounts are created only via an
+      // authenticated admin-only path (see UsersModule).
+      const roleId = await this.resolveRoleId('student');
 
       const user = await this.prisma.user.create({
         data: {
@@ -168,16 +179,20 @@ export class AuthService {
         },
       });
 
+      const jti = randomUUID();
+
       const accessToken = signAccessToken({
         userId: user.id,
         name: user.name,
         email: user.email,
+        jti,
       });
 
       const refreshToken = signRefreshToken({
         userId: user.id,
         name: user.name,
         email: user.email,
+        jti,
       });
 
       const hashedRefreshToken = await hashPassword(refreshToken);
@@ -201,7 +216,7 @@ export class AuthService {
           revoked_at: null,
           created_at: now,
           family_id: randomUUID(),
-          jti: randomUUID(),
+          jti,
         },
       });
 
@@ -225,6 +240,196 @@ export class AuthService {
             : 'Register failed unexpectedly',
       };
     }
+  }
+
+  async logout(refreshToken: string): Promise<boolean> {
+    try {
+      const payload = verifyRefreshToken(refreshToken) as {
+        userId?: unknown;
+        jti?: unknown;
+      };
+      const userId = Number(payload.userId);
+
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return false;
+      }
+
+      const session = await this.findSessionByRefreshToken(
+        userId,
+        payload.jti,
+        refreshToken,
+      );
+
+      if (!session) {
+        return false;
+      }
+
+      await this.prisma.authSession.update({
+        where: { id: session.id },
+        data: { revoked_at: new Date() },
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Logout failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  async refreshSession(refreshToken: string, sessionMetadata: SessionMetadata) {
+    try {
+      const payload = verifyRefreshToken(refreshToken) as {
+        userId?: unknown;
+        jti?: unknown;
+      };
+      const userId = Number(payload.userId);
+
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return { success: false, message: 'Invalid refresh token' };
+      }
+
+      const session = await this.findSessionByRefreshToken(
+        userId,
+        payload.jti,
+        refreshToken,
+      );
+
+      if (!session) {
+        return {
+          success: false,
+          message: 'Refresh token is invalid, expired, or already used',
+        };
+      }
+
+      const now = new Date();
+
+      if (session.expired_at < now) {
+        return { success: false, message: 'Refresh token has expired' };
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { role: true },
+      });
+
+      if (!user) {
+        return { success: false, message: 'User is not found' };
+      }
+
+      const newJti = randomUUID();
+
+      const newAccessToken = signAccessToken({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        jti: newJti,
+      });
+
+      const newRefreshToken = signRefreshToken({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        jti: newJti,
+      });
+
+      const hashedRefreshToken = await hashPassword(newRefreshToken);
+
+      const sessionTtlMs = this.parseDurationToMs(
+        process.env.REFRESH_TOKEN_EXPIRATION ?? '30d',
+      );
+
+      // Rotate: revoke the old session and issue a fresh one under the same
+      // family, so reuse of a revoked refresh token is detectable later if
+      // reuse-detection is added.
+      await this.prisma.$transaction([
+        this.prisma.authSession.update({
+          where: { id: session.id },
+          data: { revoked_at: now },
+        }),
+        this.prisma.authSession.create({
+          data: {
+            user_id: user.id,
+            refresh_toke_hash: hashedRefreshToken,
+            browser_agent: sessionMetadata.browser_agent,
+            ip_address: sessionMetadata.ip_address,
+            expired_at: new Date(now.getTime() + sessionTtlMs),
+            rotated_at: now,
+            revoked_at: null,
+            created_at: now,
+            family_id: session.family_id,
+            jti: newJti,
+          },
+        }),
+      ]);
+
+      return {
+        success: true,
+        message: 'Token refreshed',
+        user,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (error) {
+      logger.error('Refresh failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Refresh failed unexpectedly',
+      };
+    }
+  }
+
+  // Looks up the exact session a raw refresh token belongs to. Every token
+  // minted by login/register/refreshSession carries a unique `jti` claim
+  // matching its AuthSession row, so this resolves in one indexed lookup
+  // instead of scanning every active session for the user. Falls back to a
+  // hash-comparison scan for tokens issued before the jti claim existed.
+  // Either way, the raw token is still verified against the stored bcrypt
+  // hash before the session is trusted.
+  private async findSessionByRefreshToken(
+    userId: number,
+    jti: unknown,
+    rawToken: string,
+  ) {
+    if (typeof jti === 'string' && jti.length > 0) {
+      const session = await this.prisma.authSession.findUnique({
+        where: { jti },
+      });
+
+      if (
+        session &&
+        session.user_id === userId &&
+        session.revoked_at === null &&
+        (await comparePassword(rawToken, session.refresh_toke_hash))
+      ) {
+        return session;
+      }
+
+      return null;
+    }
+
+    const candidateSessions = await this.prisma.authSession.findMany({
+      where: { user_id: userId, revoked_at: null },
+    });
+
+    for (const session of candidateSessions) {
+      const matches = await comparePassword(
+        rawToken,
+        session.refresh_toke_hash,
+      );
+
+      if (matches) {
+        return session;
+      }
+    }
+
+    return null;
   }
 
   private parseDurationToMs(value: string): number {
