@@ -564,9 +564,9 @@ type Query {
   classAttendanceStatistics(classId: Int!): ClassAttendanceStatistics!
   myAttendanceStatistics(classId: Int!): StudentAttendanceStatistics!
   myAttendanceHistory(classId: Int!): [StudentAttendanceHistoryEntry!]!
+  gradeCategoriesByClass(classId: Int!): [ClassGradeCategory!]!
   submissionsByAssignment(assignmentId: Int!): [Submission!]!
   mySubmission(assignmentId: Int!): Submission
-  gradeCategoriesByClass(classId: Int!): [ClassGradeCategory!]!
   classGradebook(classId: Int!): ClassGradebook!
   myGrades(classId: Int!): StudentGradebook!
   adminDashboard: AdminDashboard!

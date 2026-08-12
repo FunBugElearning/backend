@@ -188,6 +188,40 @@ export class AssignmentsService {
     });
   }
 
+  async findByClassId(classId: number, canSeeDrafts: boolean) {
+    const classItem = await this.prisma.class.findUnique({
+      where: {
+        id: classId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
+    }
+
+    return this.prisma.assignment.findMany({
+      where: {
+        classId,
+        ...(canSeeDrafts ? {} : { status: 'published' }),
+      },
+      orderBy: {
+        deadline: 'asc',
+      },
+      include: {
+        class: true,
+        category: true,
+        createdBy: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+  }
+
   async findOne(id: number, userId: number, role: string) {
     const assignment = await this.prisma.assignment.findUnique({
       where: {

@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsIn, IsOptional } from 'class-validator';
+import { IsDate, IsEmail, IsIn, IsOptional } from 'class-validator';
 
 @InputType()
 export class RegisterAuthInput {
@@ -23,6 +23,7 @@ export class RegisterAuthInput {
   @Field(() => Date, {
     description: 'User Date of Birth',
   })
+  @IsDate({ message: 'dateOfBirth is required and must be a valid date' })
   dateOfBirth: Date;
 
   @Field(() => String, {
