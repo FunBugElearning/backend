@@ -6,6 +6,7 @@ import { RegisterAuthInput } from './dto/register-auth.input';
 import { logger } from 'src/helper/logger';
 import { comparePassword, hashPassword } from 'src/utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import {
   signAccessToken,
   signRefreshToken,
@@ -19,7 +20,10 @@ import type { SessionMetadata } from 'src/utils/agent.utils';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
+  ) {}
 
   async login(
     loginAuthInput: LoginAuthInput,
@@ -90,6 +94,7 @@ export class AuthService {
 
       await this.prisma.authSession.create({
         data: {
+          id: await this.idSequence.next('AuthSession'),
           user_id: user.id,
           refresh_toke_hash: hashedRefreshToken,
           browser_agent: sessionMetadata.browser_agent,
@@ -162,8 +167,11 @@ export class AuthService {
 
       const user = await this.prisma.user.create({
         data: {
+          id: await this.idSequence.next('User'),
           name,
+          nameLower: name.toLowerCase(),
           email,
+          emailLower: email.toLowerCase(),
           password: hashedPassword,
           dateOfBirth,
           address,
@@ -207,6 +215,7 @@ export class AuthService {
 
       await this.prisma.authSession.create({
         data: {
+          id: await this.idSequence.next('AuthSession'),
           user_id: user.id,
           refresh_toke_hash: hashedRefreshToken,
           browser_agent: sessionMetadata.browser_agent,
@@ -343,6 +352,8 @@ export class AuthService {
       // Rotate: revoke the old session and issue a fresh one under the same
       // family, so reuse of a revoked refresh token is detectable later if
       // reuse-detection is added.
+      const newSessionId = await this.idSequence.next('AuthSession');
+
       await this.prisma.$transaction([
         this.prisma.authSession.update({
           where: { id: session.id },
@@ -350,6 +361,7 @@ export class AuthService {
         }),
         this.prisma.authSession.create({
           data: {
+            id: newSessionId,
             user_id: user.id,
             refresh_toke_hash: hashedRefreshToken,
             browser_agent: sessionMetadata.browser_agent,
@@ -472,12 +484,17 @@ export class AuthService {
       student: 'Default student role',
     };
 
-    const role = await this.prisma.role.upsert({
-      where: {
-        name: normalizedRole,
-      },
-      update: {},
-      create: {
+    const existingRole = await this.prisma.role.findUnique({
+      where: { name: normalizedRole },
+    });
+
+    if (existingRole) {
+      return existingRole.id;
+    }
+
+    const role = await this.prisma.role.create({
+      data: {
+        id: await this.idSequence.next('Role'),
         name: normalizedRole,
         description:
           roleDescriptions[normalizedRole as keyof typeof roleDescriptions],

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { Prisma } from '@prisma/client';
 import { CreateClassInput } from './dto/create-class.input';
 import { UpdateClassInput } from './dto/update-class.input';
@@ -15,14 +16,16 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 export class ClassesService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  create(createClassInput: CreateClassInput, createdById: number) {
+  async create(createClassInput: CreateClassInput, createdById: number) {
     const { name, description, teacherIds, studentIds } = createClassInput;
 
     return this.prisma.class.create({
       data: {
+        id: await this.idSequence.next('Class'),
         name,
         description,
         createdById,
@@ -524,21 +527,22 @@ export class ClassesService {
     const page = input.page ?? 1;
     const limit = input.limit ?? 10;
 
+    // Prisma's MongoDB connector has no `mode: 'insensitive'` filter, so
+    // this matches against the lowercased shadow fields kept in sync on
+    // every User write (see schema.prisma's User.nameLower/emailLower).
     const searchConditions: Prisma.UserWhereInput[] = [];
     if (name) {
       searchConditions.push({
-        name: {
-          contains: name,
-          mode: 'insensitive' as const,
+        nameLower: {
+          contains: name.toLowerCase(),
         },
       });
     }
 
     if (email) {
       searchConditions.push({
-        email: {
-          contains: email,
-          mode: 'insensitive' as const,
+        emailLower: {
+          contains: email.toLowerCase(),
         },
       });
     }
@@ -548,7 +552,6 @@ export class ClassesService {
         is: {
           name: {
             equals: 'student',
-            mode: 'insensitive',
           },
         },
       },

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
 import { UpdateAssignmentInput } from './dto/update-assignment.input';
 import { NotificationsService } from 'src/notifications/notifications.service';
@@ -13,6 +14,7 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 export class AssignmentsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -94,6 +96,7 @@ export class AssignmentsService {
 
     const created = await this.prisma.assignment.create({
       data: {
+        id: await this.idSequence.next('Assignment'),
         title,
         description: createAssignmentInput.description?.trim() || undefined,
         deadline: new Date(createAssignmentInput.deadline),

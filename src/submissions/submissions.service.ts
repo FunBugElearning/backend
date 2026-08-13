@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { SubmitAssignmentInput } from './dto/submit-assignment.input';
 import { SubmissionStatus } from './entities/submission.entity';
 import { NotificationsService } from 'src/notifications/notifications.service';
@@ -50,6 +51,7 @@ function withStatus<
 export class SubmissionsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -127,6 +129,8 @@ export class SubmissionsService {
       );
     }
 
+    const newSubmissionId = await this.idSequence.next('Submission');
+
     const submission = await this.prisma.submission.upsert({
       where: {
         assignmentId_studentId: {
@@ -140,6 +144,7 @@ export class SubmissionsService {
         submittedAt: new Date(),
       },
       create: {
+        id: newSubmissionId,
         assignmentId: input.assignmentId,
         studentId,
         content: content || null,

@@ -5,10 +5,14 @@ import {
 } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
+  ) {}
 
   // Called by other feature services (classes, assignments, submissions,
   // grades, attendance) at the point of the triggering event — no generic
@@ -22,7 +26,14 @@ export class NotificationsService {
     link?: string,
   ) {
     return this.prisma.notification.create({
-      data: { userId, type, title, body, link },
+      data: {
+        id: await this.idSequence.next('Notification'),
+        userId,
+        type,
+        title,
+        body,
+        link,
+      },
     });
   }
 
@@ -39,8 +50,13 @@ export class NotificationsService {
       return;
     }
 
+    const newIds = await Promise.all(
+      uniqueUserIds.map(() => this.idSequence.next('Notification')),
+    );
+
     await this.prisma.notification.createMany({
-      data: uniqueUserIds.map((userId) => ({
+      data: uniqueUserIds.map((userId, index) => ({
+        id: newIds[index],
         userId,
         type,
         title,

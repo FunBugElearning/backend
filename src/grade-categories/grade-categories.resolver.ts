@@ -1,11 +1,4 @@
-import {
-  Args,
-  Context,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import {
   ForbiddenException,
   NotFoundException,

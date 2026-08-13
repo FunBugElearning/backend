@@ -5,13 +5,26 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { CreateGradeCategoryInput } from './dto/create-grade-category.input';
+import { escapeRegExp, firstBatchOf } from 'src/utils/mongo-search.utils';
+
+interface ClassGradeCategoryDuplicateMatch {
+  _id: number;
+}
 
 @Injectable()
 export class GradeCategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
+  ) {}
 
   async create(input: CreateGradeCategoryInput) {
+    if (!input.name.trim()) {
+      throw new BadRequestException('Grade category name is required');
+    }
+
     const classItem = await this.prisma.class.findUnique({
       where: {
         id: input.classId,
@@ -25,16 +38,21 @@ export class GradeCategoriesService {
       throw new NotFoundException('Class is not found');
     }
 
+    // Prisma's MongoDB connector doesn't support `mode: 'insensitive'`, so
+    // this case-insensitive exact-match check goes through a raw command.
+    const escapedName = escapeRegExp(input.name.trim());
+
+    const rawMatches = await this.prisma.$runCommandRaw({
+      find: 'class_grade_categories',
+      filter: {
+        classId: input.classId,
+        name: { $regex: `^${escapedName}$`, $options: 'i' },
+      },
+      limit: 1,
+    });
+
     const existingCategory =
-      await this.prisma.classGradeCategory.findFirst({
-        where: {
-          classId: input.classId,
-          name: {
-            equals: input.name.trim(),
-            mode: 'insensitive',
-          },
-        },
-      });
+      firstBatchOf<ClassGradeCategoryDuplicateMatch>(rawMatches).length > 0;
 
     if (existingCategory) {
       throw new BadRequestException(
@@ -42,15 +60,14 @@ export class GradeCategoriesService {
       );
     }
 
-    const existingCategories =
-      await this.prisma.classGradeCategory.findMany({
-        where: {
-          classId: input.classId,
-        },
-        select: {
-          weight: true,
-        },
-      });
+    const existingCategories = await this.prisma.classGradeCategory.findMany({
+      where: {
+        classId: input.classId,
+      },
+      select: {
+        weight: true,
+      },
+    });
 
     const currentTotalWeight = existingCategories.reduce(
       (sum, category) => sum + category.weight,
@@ -67,6 +84,7 @@ export class GradeCategoriesService {
 
     return this.prisma.classGradeCategory.create({
       data: {
+        id: await this.idSequence.next('ClassGradeCategory'),
         classId: input.classId,
         name: input.name.trim(),
         weight: input.weight,

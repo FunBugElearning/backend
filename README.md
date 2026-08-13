@@ -6,8 +6,8 @@ NestJS backend service for Smart Akademy.
 
 - NestJS 11
 - TypeScript 5
-- Prisma 7
-- PostgreSQL (via Prisma datasource)
+- Prisma 6 (MongoDB - Prisma 7 doesn't support MongoDB yet)
+- MongoDB (via Prisma datasource), MongoDB Atlas in production
 - Jest 30
 - ESLint 9 + Prettier 3
 - Package manager: `pnpm`
@@ -16,7 +16,8 @@ NestJS backend service for Smart Akademy.
 
 - Node.js 22+
 - `pnpm` installed globally
-- Running PostgreSQL database
+- A MongoDB replica set reachable at `DATABASE_URL` - either the local
+  Docker container below, or MongoDB Atlas (always a replica set)
 
 ## Environment variables
 
@@ -24,11 +25,24 @@ Create a `.env` file in project root.
 
 Required:
 
-- `DATABASE_URL` - PostgreSQL connection string used by Prisma
+- `DATABASE_URL` - MongoDB connection string used by Prisma. Must point at
+  a replica set (`$transaction` requires one) - e.g.
+  `mongodb://localhost:27018/smart_academy?replicaSet=rs0` locally, or a
+  `mongodb+srv://...` Atlas URI in production.
 
 Optional:
 
 - `PORT` - API port (defaults to `3000`)
+
+## Local MongoDB (Docker)
+
+```bash
+docker compose up -d
+```
+
+Starts a single-node MongoDB replica set on port 27018 (`smart-academy-mongo`).
+The container's healthcheck auto-initiates the replica set on first boot -
+wait for `docker ps` to show it `healthy` before connecting.
 
 ## Install and generate Prisma client
 
@@ -41,12 +55,16 @@ Important: this project uses Prisma client from `@prisma/client` (not from `src/
 
 ## Database workflow
 
-```bash
-# Create and apply a new migration in local development
-pnpm exec prisma migrate dev --name <migration_name>
+MongoDB has no `prisma migrate` workflow - schema/index sync is `db push`,
+not migrations. (Historical `prisma/migrations/**` is left in the repo from
+the old PostgreSQL setup; it's never executed against MongoDB.)
 
-# Apply existing migrations (deployment/CI)
-pnpm exec prisma migrate deploy
+```bash
+# Sync the schema's collections/indexes to the database
+pnpm run db:push
+
+# Seed reference + sample data (idempotent - safe to re-run)
+pnpm exec prisma db seed
 
 # Open Prisma Studio
 pnpm exec prisma studio

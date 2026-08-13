@@ -7,19 +7,12 @@
 // against, so this script wipes and recreates just that classroom-domain
 // data on every run, giving a clean, predictable state each time.
 import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { IdSequenceService } from '../src/prisma/id-sequence.service';
 import { hashPassword } from '../src/utils/password.utils';
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error('DATABASE_URL is not set');
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString }),
-});
+const prisma = new PrismaService();
+const idSequence = new IdSequenceService(prisma);
 
 // Documented in .claude/TEST_STRATEGY.md. Never used outside local dev.
 const SEED_PASSWORD = 'Password123!';
@@ -31,10 +24,14 @@ function daysFromNow(days: number): Date {
 }
 
 async function upsertRole(name: string, description: string) {
-  return prisma.role.upsert({
-    where: { name },
-    update: {},
-    create: { name, description },
+  const existing = await prisma.role.findUnique({ where: { name } });
+
+  if (existing) {
+    return existing;
+  }
+
+  return prisma.role.create({
+    data: { id: await idSequence.next('Role'), name, description },
   });
 }
 
@@ -46,14 +43,23 @@ async function upsertUser(params: {
   address?: string;
   phoneNumber?: string;
 }) {
+  const existing = await prisma.user.findUnique({
+    where: { email: params.email },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
   const password = await hashPassword(SEED_PASSWORD);
 
-  return prisma.user.upsert({
-    where: { email: params.email },
-    update: {},
-    create: {
+  return prisma.user.create({
+    data: {
+      id: await idSequence.next('User'),
       name: params.name,
+      nameLower: params.name.toLowerCase(),
       email: params.email,
+      emailLower: params.email.toLowerCase(),
       password,
       dateOfBirth: params.dateOfBirth,
       address: params.address,
@@ -64,6 +70,8 @@ async function upsertUser(params: {
 }
 
 async function main() {
+  await idSequence.onModuleInit();
+
   console.log('Seeding roles...');
   const adminRole = await upsertRole('admin', 'Admin role');
   const teacherRole = await upsertRole('teacher', 'Teacher role');
@@ -123,6 +131,7 @@ async function main() {
   console.log('Seeding classes...');
   const class1 = await prisma.class.create({
     data: {
+      id: await idSequence.next('Class'),
       name: 'Mentor Bootcamp 1-2026',
       description:
         'A structured review class for core concepts, assignments, and guided practice.',
@@ -134,6 +143,7 @@ async function main() {
 
   const class2 = await prisma.class.create({
     data: {
+      id: await idSequence.next('Class'),
       name: 'FullStack S5 Mentor 1:1',
       description:
         'A practical class on frontend and backend integration for full-stack projects.',
@@ -145,21 +155,42 @@ async function main() {
 
   console.log('Seeding grade categories...');
   const class1Homework = await prisma.classGradeCategory.create({
-    data: { classId: class1.id, name: 'Homework', weight: 40 },
+    data: {
+      id: await idSequence.next('ClassGradeCategory'),
+      classId: class1.id,
+      name: 'Homework',
+      weight: 40,
+    },
   });
   const class1Exams = await prisma.classGradeCategory.create({
-    data: { classId: class1.id, name: 'Exams', weight: 60 },
+    data: {
+      id: await idSequence.next('ClassGradeCategory'),
+      classId: class1.id,
+      name: 'Exams',
+      weight: 60,
+    },
   });
   const class2Homework = await prisma.classGradeCategory.create({
-    data: { classId: class2.id, name: 'Homework', weight: 50 },
+    data: {
+      id: await idSequence.next('ClassGradeCategory'),
+      classId: class2.id,
+      name: 'Homework',
+      weight: 50,
+    },
   });
   await prisma.classGradeCategory.create({
-    data: { classId: class2.id, name: 'Final Project', weight: 50 },
+    data: {
+      id: await idSequence.next('ClassGradeCategory'),
+      classId: class2.id,
+      name: 'Final Project',
+      weight: 50,
+    },
   });
 
   console.log('Seeding assignments...');
   const class1Assignment1 = await prisma.assignment.create({
     data: {
+      id: await idSequence.next('Assignment'),
       title: 'Array Fundamentals',
       description: 'Solve the provided array manipulation exercises.',
       deadline: daysFromNow(7),
@@ -172,6 +203,7 @@ async function main() {
   });
   await prisma.assignment.create({
     data: {
+      id: await idSequence.next('Assignment'),
       title: 'Midterm Exam',
       description: 'Covers weeks 1-6.',
       deadline: daysFromNow(14),
@@ -184,6 +216,7 @@ async function main() {
   });
   const class2Assignment1 = await prisma.assignment.create({
     data: {
+      id: await idSequence.next('Assignment'),
       title: 'REST API with Auth',
       description: 'Build a small REST API with JWT authentication.',
       deadline: daysFromNow(10),
@@ -200,6 +233,7 @@ async function main() {
   for (const [index, student] of class1Students.entries()) {
     const submission = await prisma.submission.create({
       data: {
+        id: await idSequence.next('Submission'),
         assignmentId: class1Assignment1.id,
         studentId: student.id,
         content: `${student.name}'s submission for Array Fundamentals.`,
@@ -211,6 +245,7 @@ async function main() {
     if (index % 2 === 0) {
       await prisma.grade.create({
         data: {
+          id: await idSequence.next('Grade'),
           submissionId: submission.id,
           score: 80 + index,
           feedback: 'Good work — watch your edge cases.',
@@ -224,6 +259,7 @@ async function main() {
   for (const student of class2Students) {
     await prisma.submission.create({
       data: {
+        id: await idSequence.next('Submission'),
         assignmentId: class2Assignment1.id,
         studentId: student.id,
         content: `${student.name}'s submission for REST API with Auth.`,
@@ -248,6 +284,7 @@ async function main() {
     for (let sessionIndex = 0; sessionIndex < 2; sessionIndex++) {
       const session = await prisma.attendanceSession.create({
         data: {
+          id: await idSequence.next('AttendanceSession'),
           classId: classRow.id,
           createdById: teacher.id,
           attendanceDate: daysFromNow(-14 + sessionIndex * 7 + classIndex),
@@ -258,6 +295,7 @@ async function main() {
       for (const [studentIndex, student] of classStudents.entries()) {
         await prisma.attendanceRecord.create({
           data: {
+            id: await idSequence.next('AttendanceRecord'),
             attendanceSessionId: session.id,
             studentId: student.id,
             status:

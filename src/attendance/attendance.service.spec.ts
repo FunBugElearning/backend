@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { AttendanceService } from './attendance.service';
 
@@ -17,6 +18,7 @@ describe('AttendanceService', () => {
     $transaction: jest.Mock;
   };
   let notificationsService: { createMany: jest.Mock };
+  let idSequence: { next: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -27,12 +29,15 @@ describe('AttendanceService', () => {
     };
 
     notificationsService = { createMany: jest.fn() };
+    let nextId = 200;
+    idSequence = { next: jest.fn(() => Promise.resolve(++nextId)) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AttendanceService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: IdSequenceService, useValue: idSequence },
       ],
     }).compile();
 

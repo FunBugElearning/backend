@@ -49,10 +49,10 @@ export class DashboardService {
       await Promise.all([
         this.prisma.class.count(),
         this.prisma.user.count({
-          where: { role: { name: { equals: 'teacher', mode: 'insensitive' } } },
+          where: { role: { name: { equals: 'teacher' } } },
         }),
         this.prisma.user.count({
-          where: { role: { name: { equals: 'student', mode: 'insensitive' } } },
+          where: { role: { name: { equals: 'student' } } },
         }),
         this.prisma.assignment.count(),
       ]);

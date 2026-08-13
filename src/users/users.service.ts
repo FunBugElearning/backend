@@ -7,12 +7,16 @@ import { Prisma } from '@prisma/client';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { PrismaService } from '../prisma/prisma.service';
+import { IdSequenceService } from '../prisma/id-sequence.service';
 import { logger } from 'src/helper/logger';
 import { hashPassword } from 'src/utils/password.utils';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
+  ) {}
 
   async create(createUserInput: CreateUserInput) {
     try {
@@ -31,7 +35,10 @@ export class UsersService {
 
       return this.prisma.user.create({
         data: {
+          id: await this.idSequence.next('User'),
           ...data,
+          nameLower: data.name.toLowerCase(),
+          emailLower: data.email.toLowerCase(),
           password: hashedPassword,
           role: { connect: { id: resolvedRoleId } },
         },
@@ -76,7 +83,10 @@ export class UsersService {
 
       return this.prisma.user.create({
         data: {
+          id: await this.idSequence.next('User'),
           ...data,
+          nameLower: data.name.toLowerCase(),
+          emailLower: data.email.toLowerCase(),
           password: hashedPassword,
           role: { connect: { id: resolvedRoleId } },
         },
@@ -128,6 +138,12 @@ export class UsersService {
         where: { id },
         data: {
           ...data,
+          ...(data.name !== undefined && {
+            nameLower: data.name.toLowerCase(),
+          }),
+          ...(data.email !== undefined && {
+            emailLower: data.email.toLowerCase(),
+          }),
           ...(roleData ?? {}),
         },
         include: { role: true },
@@ -160,10 +176,17 @@ export class UsersService {
       return role.id;
     }
 
-    const studentRole = await this.prisma.role.upsert({
+    const existingStudentRole = await this.prisma.role.findUnique({
       where: { name: 'student' },
-      update: {},
-      create: {
+    });
+
+    if (existingStudentRole) {
+      return existingStudentRole.id;
+    }
+
+    const studentRole = await this.prisma.role.create({
+      data: {
+        id: await this.idSequence.next('Role'),
         name: 'student',
         description: 'Default student role',
       },
@@ -180,10 +203,18 @@ export class UsersService {
       student: 'Default student role',
     };
 
-    const role = await this.prisma.role.upsert({
-      where: { name },
-      update: {},
-      create: { name, description: descriptions[name] },
+    const existingRole = await this.prisma.role.findUnique({ where: { name } });
+
+    if (existingRole) {
+      return existingRole.id;
+    }
+
+    const role = await this.prisma.role.create({
+      data: {
+        id: await this.idSequence.next('Role'),
+        name,
+        description: descriptions[name],
+      },
     });
 
     return role.id;

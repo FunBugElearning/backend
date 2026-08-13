@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { CreateAttendanceSessionInput } from './dto/create-attendance-session.input';
 import { BulkUpsertAttendanceRecordsInput } from './dto/bulk-upsert-attendance-records.input';
 import { GetAttendanceSessionsInput } from './dto/get-attendance-sessions.input';
@@ -20,6 +21,7 @@ import { UpdateAttendanceRecordsInput } from './dto/update-attendance-records.in
 export class AttendanceService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -42,6 +44,7 @@ export class AttendanceService {
 
     return this.prisma.attendanceSession.create({
       data: {
+        id: await this.idSequence.next('AttendanceSession'),
         classId: input.classId,
         createdById,
         attendanceDate: new Date(input.attendanceDate),
@@ -127,8 +130,12 @@ export class AttendanceService {
       );
     }
 
+    const newRecordIds = await Promise.all(
+      input.records.map(() => this.idSequence.next('AttendanceRecord')),
+    );
+
     const results = await this.prisma.$transaction(
-      input.records.map((record) =>
+      input.records.map((record, index) =>
         this.prisma.attendanceRecord.upsert({
           where: {
             attendanceSessionId_studentId: {
@@ -141,6 +148,7 @@ export class AttendanceService {
             note: record.note?.trim() || undefined,
           },
           create: {
+            id: newRecordIds[index],
             attendanceSessionId: input.attendanceSessionId,
             studentId: record.studentId,
             status: record.status,
@@ -241,10 +249,15 @@ export class AttendanceService {
       );
     }
 
+    const newRecordIds = await Promise.all(
+      input.records.map(() => this.idSequence.next('AttendanceRecord')),
+    );
+
     return this.prisma.$transaction(
-      input.records.map((record) =>
+      input.records.map((record, index) =>
         this.prisma.attendanceRecord.create({
           data: {
+            id: newRecordIds[index],
             attendanceSessionId: input.attendanceSessionId,
             studentId: record.studentId,
             status: record.status,

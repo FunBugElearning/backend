@@ -23,6 +23,12 @@ describe('AppController (e2e)', () => {
           update: jest.fn(),
           delete: jest.fn(),
         },
+        // IdSequenceService.onModuleInit() bootstraps a Counter doc per
+        // model on every app startup - needed here since this test spins
+        // up the full AppModule (and therefore the real IdSequenceService).
+        counter: {
+          upsert: jest.fn().mockResolvedValue({ id: 'mock', seq: 0 }),
+        },
       })
       .compile();
 

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { NotificationsService } from './notifications.service';
 
 describe('NotificationsService', () => {
@@ -17,6 +18,7 @@ describe('NotificationsService', () => {
     };
     $transaction: jest.Mock;
   };
+  let idSequence: { next: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -31,11 +33,14 @@ describe('NotificationsService', () => {
       },
       $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
+    let nextId = 100;
+    idSequence = { next: jest.fn(() => Promise.resolve(++nextId)) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: IdSequenceService, useValue: idSequence },
       ],
     }).compile();
 
@@ -53,6 +58,7 @@ describe('NotificationsService', () => {
       expect(prisma.notification.createMany).toHaveBeenCalledWith({
         data: [
           {
+            id: 101,
             userId: 5,
             type: 'enrollment',
             title: 'You were enrolled',
@@ -60,6 +66,7 @@ describe('NotificationsService', () => {
             link: undefined,
           },
           {
+            id: 102,
             userId: 6,
             type: 'enrollment',
             title: 'You were enrolled',
