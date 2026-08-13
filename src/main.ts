@@ -6,13 +6,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // The frontend's graphqlRequest() sends `credentials: "include"`, so the
-  // browser requires an explicit origin (not `*`) plus `credentials: true`
-  // here, or every request is blocked by CORS before it reaches the server.
   const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+  console.log('CORS origins:', corsOrigins);
 
   app.enableCors({
     origin: corsOrigins,
