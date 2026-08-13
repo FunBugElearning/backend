@@ -21,7 +21,7 @@ import { UpdateAttendanceRecordInput } from './dto/update-attendance-record.inpu
 import { CreateAttendanceRecordsInput } from './dto/create-attendance-records.input';
 import { UpdateAttendanceRecordsInput } from './dto/update-attendance-records.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => AttendanceSession)
 export class AttendanceResolver {

@@ -6,7 +6,7 @@ import { Auth, AuthUser } from './entities/auth.entity';
 import { LoginAuthInput } from './dto/login-auth.input';
 import { RegisterAuthInput } from './dto/register-auth.input';
 import { getSessionMetadata } from '../utils/agent.utils';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Resolver(() => Auth)

@@ -7,7 +7,7 @@ import { Notification } from './entities/notification.entity';
 import { NotificationPagination } from './entities/notification-pagination.entity';
 import { GetNotificationsInput } from './dto/get-notifications.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => Notification)
 export class NotificationsResolver {

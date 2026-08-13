@@ -15,7 +15,7 @@ import {
 import {
   validateLoginInput,
   validateRegisterInput,
-} from 'src/middleware/auth-validation.middleware';
+} from '../middleware/auth-validation.middleware';
 import type { SessionMetadata } from '../utils/agent.utils';
 
 @Injectable()

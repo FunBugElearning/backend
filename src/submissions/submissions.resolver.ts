@@ -10,7 +10,7 @@ import { SubmissionsService } from './submissions.service';
 import { Submission } from './entities/submission.entity';
 import { SubmitAssignmentInput } from './dto/submit-assignment.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => Submission)
 export class SubmissionsResolver {

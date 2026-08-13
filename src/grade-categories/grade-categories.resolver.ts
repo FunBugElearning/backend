@@ -10,7 +10,7 @@ import { GradeCategoriesService } from './grade-categories.service';
 import { ClassGradeCategory } from './entities/class-grade-category.entity';
 import { CreateGradeCategoryInput } from './dto/create-grade-category.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => ClassGradeCategory)
 export class GradeCategoriesResolver {

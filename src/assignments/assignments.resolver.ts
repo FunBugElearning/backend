@@ -11,7 +11,7 @@ import { Assignment } from './entities/assignment.entity';
 import { CreateAssignmentInput } from './dto/create-assignment.input';
 import { UpdateAssignmentInput } from './dto/update-assignment.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => Assignment)
 export class AssignmentsResolver {
