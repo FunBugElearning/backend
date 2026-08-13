@@ -9,7 +9,7 @@
 import 'dotenv/config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { IdSequenceService } from '../src/prisma/id-sequence.service';
-import { hashPassword } from '../../utils/password.utils';
+import { hashPassword } from '../src/utils/password.utils';
 
 const prisma = new PrismaService();
 const idSequence = new IdSequenceService(prisma);
