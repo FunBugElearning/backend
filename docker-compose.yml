@@ -1,15 +1,19 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: smart-academy-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: smart_academy
-      POSTGRES_HOST_AUTH_METHOD: trust
+  mongo:
+    image: mongo:7
+    container_name: smart-academy-mongo
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27018"]
     ports:
-      - "5433:5432"
+      - "27018:27018"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
+    healthcheck:
+      test: |
+        mongosh --port 27018 --quiet --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27018' }] }).ok }"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
 volumes:
-  postgres_data:
+  mongo_data:

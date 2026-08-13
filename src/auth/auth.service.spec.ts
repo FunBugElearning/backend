@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { IdSequenceService } from '../prisma/id-sequence.service';
 import { AuthService } from './auth.service';
 import type { RegisterAuthInput } from './dto/register-auth.input';
 
@@ -8,8 +9,9 @@ describe('AuthService', () => {
   let prisma: {
     user: { findUnique: jest.Mock; create: jest.Mock };
     authSession: { create: jest.Mock };
-    role: { upsert: jest.Mock };
+    role: { findUnique: jest.Mock; create: jest.Mock };
   };
+  let idSequence: { next: jest.Mock };
   const originalEnv = process.env;
 
   beforeEach(async () => {
@@ -28,9 +30,11 @@ describe('AuthService', () => {
         create: jest.fn(),
       },
       role: {
-        upsert: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
       },
     };
+    idSequence = { next: jest.fn().mockResolvedValue(1) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +42,10 @@ describe('AuthService', () => {
         {
           provide: PrismaService,
           useValue: prisma,
+        },
+        {
+          provide: IdSequenceService,
+          useValue: idSequence,
         },
       ],
     }).compile();
@@ -56,7 +64,8 @@ describe('AuthService', () => {
   describe('register', () => {
     it('never grants a client-requested role — always resolves to student, even when role="admin" is sent', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      prisma.role.upsert.mockResolvedValue({ id: 1, name: 'student' });
+      prisma.role.findUnique.mockResolvedValue(null);
+      prisma.role.create.mockResolvedValue({ id: 1, name: 'student' });
       prisma.user.create.mockResolvedValue({
         id: 1,
         name: 'Eve',
@@ -79,12 +88,12 @@ describe('AuthService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(prisma.role.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { name: 'student' } }),
-      );
-      expect(prisma.role.upsert).not.toHaveBeenCalledWith(
-        expect.objectContaining({ where: { name: 'admin' } }),
-      );
+      expect(prisma.role.findUnique).toHaveBeenCalledWith({
+        where: { name: 'student' },
+      });
+      expect(prisma.role.findUnique).not.toHaveBeenCalledWith({
+        where: { name: 'admin' },
+      });
     });
   });
 });

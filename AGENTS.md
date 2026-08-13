@@ -26,10 +26,29 @@ High-signal notes for coding agents in `backend/server`.
 
 ## Prisma gotchas
 
+- Database is MongoDB (Prisma 6.x - MongoDB isn't supported on Prisma 7 yet).
+  `PrismaService` calls plain `new PrismaClient()`, no driver adapter.
 - `PrismaService` auto-loads `.env` and throws if `DATABASE_URL` missing
-- After schema changes: `pnpm exec prisma generate` + migrate if models changed
+- After schema changes: `pnpm exec prisma generate` then `pnpm run db:push`
+  (MongoDB has no `prisma migrate` workflow - schema sync is `db push`, not
+  migrations. Historical `prisma/migrations/**` is old Postgres history, not
+  executed against Mongo.)
 - Import from `@prisma/client`, NOT `src/generated/prisma`
-- Datasource URL in environment (not schema file)
+- Datasource URL is in `prisma/schema.prisma` (`url = env("DATABASE_URL")`),
+  standard for Prisma's MongoDB connector
+- Every model's `id` is an application-assigned `Int` (not ObjectId),
+  generated via `IdSequenceService` (`src/prisma/id-sequence.service.ts`) -
+  every `.create()`/`.upsert()` call must supply `id: await
+  idSequence.next('ModelName')`. This keeps ids identical in shape to the
+  old Postgres autoincrement ids, so the GraphQL contract and frontend
+  didn't need to change.
+- No `mode: 'insensitive'` on MongoDB - case-insensitive search goes
+  through either a lowercased shadow field (`User.nameLower`/`emailLower`)
+  or `$runCommandRaw` with a regex filter (see
+  `src/utils/mongo-search.utils.ts`)
+- Local dev: `docker compose up -d` runs a single-node MongoDB replica set
+  (required for `$transaction`, which MongoDB only supports on a replica
+  set) on port 27018, auto-initiated via the container's healthcheck
 
 ## GraphQL conventions
 

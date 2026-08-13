@@ -65,9 +65,7 @@ export class GradebookService {
             const score = submission?.grade?.score ?? 0;
 
             const percent =
-              assignment.maxScore > 0
-                ? (score / assignment.maxScore) * 100
-                : 0;
+              assignment.maxScore > 0 ? (score / assignment.maxScore) * 100 : 0;
 
             return sum + percent;
           }, 0);
@@ -170,9 +168,7 @@ export class GradebookService {
           const score = submission?.grade?.score ?? 0;
 
           const percent =
-            assignment.maxScore > 0
-              ? (score / assignment.maxScore) * 100
-              : 0;
+            assignment.maxScore > 0 ? (score / assignment.maxScore) * 100 : 0;
 
           return sum + percent;
         }, 0);

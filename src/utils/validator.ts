@@ -32,9 +32,7 @@ export function validateEmail(email: string): boolean {
 
 export function validateDob(
   dateOfBirth: unknown,
-):
-  | { ok: true; value: Date }
-  | { ok: false; reason: 'invalid' | 'future' } {
+): { ok: true; value: Date } | { ok: false; reason: 'invalid' | 'future' } {
   if (!dateOfBirth) {
     return { ok: false, reason: 'invalid' };
   }

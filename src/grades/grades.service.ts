@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { GradeSubmissionInput } from './dto/grade-submission.input';
 import { NotificationsService } from 'src/notifications/notifications.service';
 
@@ -12,6 +13,7 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 export class GradesService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly idSequence: IdSequenceService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -55,6 +57,7 @@ export class GradesService {
         gradedById,
       },
       create: {
+        id: await this.idSequence.next('Grade'),
         submissionId: input.submissionId,
         score: input.score,
         feedback: input.feedback?.trim() || null,

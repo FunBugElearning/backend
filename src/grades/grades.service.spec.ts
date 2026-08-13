@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { GradesService } from './grades.service';
 
@@ -11,6 +12,7 @@ describe('GradesService', () => {
     grade: { upsert: jest.Mock };
   };
   let notificationsService: { create: jest.Mock };
+  let idSequence: { next: jest.Mock };
 
   const submission = {
     id: 1,
@@ -32,12 +34,14 @@ describe('GradesService', () => {
     };
 
     notificationsService = { create: jest.fn() };
+    idSequence = { next: jest.fn().mockResolvedValue(50) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GradesService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: IdSequenceService, useValue: idSequence },
       ],
     }).compile();
 
@@ -81,6 +85,7 @@ describe('GradesService', () => {
         where: { submissionId: number };
         update: { score: number; feedback: string | null; gradedById: number };
         create: {
+          id: number;
           submissionId: number;
           score: number;
           feedback: string | null;
@@ -96,6 +101,7 @@ describe('GradesService', () => {
       gradedById: 2,
     });
     expect(upsertArgs.create).toEqual({
+      id: 50,
       submissionId: 1,
       score: 90,
       feedback: 'Nice work',

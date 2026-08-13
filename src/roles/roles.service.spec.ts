@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { IdSequenceService } from '../prisma/id-sequence.service';
 import { RolesService } from './roles.service';
 
 describe('RolesService', () => {
@@ -13,6 +14,7 @@ describe('RolesService', () => {
       delete: jest.Mock;
     };
   };
+  let idSequence: { next: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -24,6 +26,7 @@ describe('RolesService', () => {
         delete: jest.fn(),
       },
     };
+    idSequence = { next: jest.fn().mockResolvedValue(4) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,6 +34,10 @@ describe('RolesService', () => {
         {
           provide: PrismaService,
           useValue: prisma,
+        },
+        {
+          provide: IdSequenceService,
+          useValue: idSequence,
         },
       ],
     }).compile();
@@ -60,6 +67,7 @@ describe('RolesService', () => {
 
     expect(prisma.role.create).toHaveBeenCalledWith({
       data: {
+        id: 4,
         name: 'moderator',
         description: 'Test role',
       },

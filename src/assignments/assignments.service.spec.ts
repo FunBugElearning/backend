@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AssignmentsService } from './assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 
 describe('AssignmentsService', () => {
@@ -12,11 +13,12 @@ describe('AssignmentsService', () => {
     assignment: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
   };
   let notificationsService: { createMany: jest.Mock };
+  let idSequence: { next: jest.Mock };
 
   const baseInput = {
     title: 'Array Fundamentals',
     classId: 10,
-    deadline: '2026-08-01T00:00:00.000Z',
+    deadline: new Date('2026-08-01T00:00:00.000Z'),
   };
 
   beforeEach(async () => {
@@ -30,12 +32,14 @@ describe('AssignmentsService', () => {
       },
     };
     notificationsService = { createMany: jest.fn() };
+    idSequence = { next: jest.fn().mockResolvedValue(1) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssignmentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: IdSequenceService, useValue: idSequence },
       ],
     }).compile();
 

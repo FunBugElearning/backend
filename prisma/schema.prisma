@@ -3,7 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider     = "mongodb"
+  url          = env("DATABASE_URL")
+  // MongoDB has no native foreign-key enforcement, so referential actions
+  // below (onDelete: Cascade/SetNull/Restrict) are emulated by Prisma
+  // Client itself rather than the database.
+  relationMode = "prisma"
+}
+
+// Backs application-assigned integer ids (Mongo's _id has no native
+// autoincrement). One document per model, incremented atomically via
+// IdSequenceService. Keeping ids as plain integers - rather than switching
+// to ObjectId - preserves the existing GraphQL contract (Int ids) and
+// requires zero frontend changes.
+model Counter {
+  id  String @id @map("_id")
+  seq Int    @default(0)
 }
 
 enum AttendanceStatus {
@@ -28,9 +43,15 @@ enum NotificationType {
 }
 
 model User {
-  id                        Int                 @id @default(autoincrement())
+  id                        Int                 @id @map("_id")
   name                      String
+  // Lowercased shadow copies of name/email, kept in sync on every write.
+  // Prisma's MongoDB connector has no `mode: 'insensitive'` filter, so
+  // case-insensitive search (ClassesService.searchStudents) matches against
+  // these instead of doing a raw regex query with hand-hydrated results.
+  nameLower                 String
   email                     String              @unique
+  emailLower                String
   password                  String
   dateOfBirth               DateTime?
   address                   String?
@@ -40,8 +61,10 @@ model User {
   updatedAt                 DateTime            @updatedAt
   authSessions              AuthSession[]
   authAuditLogs             AuthAuditLog[]
-  classesAsTeacher          Class[]             @relation("ClassTeachers")
-  classesAsStudent          Class[]             @relation("ClassStudents")
+  classesAsTeacherIds       Int[]
+  classesAsTeacher          Class[]             @relation("ClassTeachers", fields: [classesAsTeacherIds], references: [id])
+  classesAsStudentIds       Int[]
+  classesAsStudent          Class[]             @relation("ClassStudents", fields: [classesAsStudentIds], references: [id])
   classesCreated            Class[]             @relation("ClassCreator")
   attendanceSessionsCreated AttendanceSession[] @relation("AttendanceSessionCreator")
   attendanceRecords         AttendanceRecord[]  @relation("StudentAttendanceRecords")
@@ -53,10 +76,14 @@ model User {
   role Role @relation(fields: [role_id], references: [id])
 
   @@index([role_id])
+  @@index([classesAsTeacherIds])
+  @@index([classesAsStudentIds])
+  @@index([nameLower])
+  @@index([emailLower])
 }
 
 model Role {
-  id          Int      @id @default(autoincrement())
+  id          Int      @id @map("_id")
   name        String   @unique
   description String?
   createdAt   DateTime @default(now())
@@ -65,7 +92,7 @@ model Role {
 }
 
 model AuthSession {
-  id                Int       @id @default(autoincrement())
+  id                Int       @id @map("_id")
   user_id           Int
   refresh_toke_hash String
   browser_agent     String
@@ -83,7 +110,7 @@ model AuthSession {
 }
 
 model AuthAuditLog {
-  id            Int      @id @default(autoincrement())
+  id            Int      @id @map("_id")
   user_id       Int
   event_type    String
   ip_address    String
@@ -96,25 +123,29 @@ model AuthAuditLog {
 }
 
 model Class {
-  id          Int      @id @default(autoincrement())
+  id          Int      @id @map("_id")
   name        String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById Int?
 
-  teachers           User[]               @relation("ClassTeachers")
-  students           User[]               @relation("ClassStudents")
+  teacherIds         Int[]
+  studentIds         Int[]
+  teachers           User[]               @relation("ClassTeachers", fields: [teacherIds], references: [id])
+  students           User[]               @relation("ClassStudents", fields: [studentIds], references: [id])
   assignments        Assignment[]
   attendanceSessions AttendanceSession[]
   gradeCategories    ClassGradeCategory[]
   createdBy          User?                @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([createdById])
+  @@index([teacherIds])
+  @@index([studentIds])
 }
 
 model Assignment {
-  id            Int              @id @default(autoincrement())
+  id            Int              @id @map("_id")
   title         String
   description   String?
   deadline      DateTime
@@ -144,7 +175,7 @@ model Assignment {
 }
 
 model AttendanceSession {
-  id             Int      @id @default(autoincrement())
+  id             Int      @id @map("_id")
   classId        Int
   createdById    Int
   attendanceDate DateTime
@@ -163,7 +194,7 @@ model AttendanceSession {
 }
 
 model AttendanceRecord {
-  id                  Int              @id @default(autoincrement())
+  id                  Int              @id @map("_id")
   attendanceSessionId Int
   studentId           Int
   status              AttendanceStatus
@@ -181,7 +212,7 @@ model AttendanceRecord {
 }
 
 model ClassGradeCategory {
-  id        Int      @id @default(autoincrement())
+  id        Int      @id @map("_id")
   classId   Int
   name      String
   weight    Float
@@ -197,7 +228,7 @@ model ClassGradeCategory {
 }
 
 model Submission {
-  id           Int      @id @default(autoincrement())
+  id           Int      @id @map("_id")
   assignmentId Int
   studentId    Int
   content      String?
@@ -217,7 +248,7 @@ model Submission {
 }
 
 model Grade {
-  id           Int      @id @default(autoincrement())
+  id           Int      @id @map("_id")
   submissionId Int      @unique
   score        Float
   feedback     String?
@@ -233,7 +264,7 @@ model Grade {
 }
 
 model Notification {
-  id        Int              @id @default(autoincrement())
+  id        Int              @id @map("_id")
   userId    Int
   type      NotificationType
   title     String
