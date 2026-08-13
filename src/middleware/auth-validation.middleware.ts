@@ -1,9 +1,9 @@
-import { logger } from 'src/helper/logger';
+import { logger } from '../helper/logger';
 import {
   validateDob,
   validateEmail,
   validateEmptyFields,
-} from 'src/utils/validator';
+} from '../utils/validator';
 
 type RegisterInput = {
   name: string;
