@@ -8,8 +8,8 @@ import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { PrismaService } from '../prisma/prisma.service';
 import { IdSequenceService } from '../prisma/id-sequence.service';
-import { logger } from 'src/helper/logger';
-import { hashPassword } from 'src/utils/password.utils';
+import { logger } from '../helper/logger';
+import { hashPassword } from '../utils/password.utils';
 
 @Injectable()
 export class UsersService {

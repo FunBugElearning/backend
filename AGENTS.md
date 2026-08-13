@@ -45,7 +45,7 @@ High-signal notes for coding agents in `backend/server`.
 - No `mode: 'insensitive'` on MongoDB - case-insensitive search goes
   through either a lowercased shadow field (`User.nameLower`/`emailLower`)
   or `$runCommandRaw` with a regex filter (see
-  `src/utils/mongo-search.utils.ts`)
+  `../utils/mongo-search.utils.ts`)
 - Local dev: `docker compose up -d` runs a single-node MongoDB replica set
   (required for `$transaction`, which MongoDB only supports on a replica
   set) on port 27018, auto-initiated via the container's healthcheck

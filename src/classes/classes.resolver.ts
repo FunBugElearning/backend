@@ -20,7 +20,7 @@ import {
   verifyAdminRole,
   verifyAdminTeacherRole,
   verifyAuthenticatedUser,
-} from 'src/middleware/role-authorization.middleware';
+} from '../middleware/role-authorization.middleware';
 import { User } from 'src/users/entities/user.entity';
 import { SearchStudentsInput } from './dto/search-students.input';
 

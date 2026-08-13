@@ -10,7 +10,7 @@ import { GradebookService } from './gradebook.service';
 import { ClassGradebook } from './entities/class-gradebook.entity';
 import { StudentGradebook } from './entities/student-gradebook.entity';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => ClassGradebook)
 export class GradebookResolver {

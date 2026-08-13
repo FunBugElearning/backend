@@ -10,7 +10,7 @@ import { GradesService } from './grades.service';
 import { Grade } from './entities/grade.entity';
 import { GradeSubmissionInput } from './dto/grade-submission.input';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyAuthenticatedUser } from 'src/middleware/role-authorization.middleware';
+import { verifyAuthenticatedUser } from '../middleware/role-authorization.middleware';
 
 @Resolver(() => Grade)
 export class GradesResolver {

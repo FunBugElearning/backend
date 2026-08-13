@@ -3,20 +3,20 @@ import { randomUUID } from 'crypto';
 
 import { LoginAuthInput } from './dto/login-auth.input';
 import { RegisterAuthInput } from './dto/register-auth.input';
-import { logger } from 'src/helper/logger';
-import { comparePassword, hashPassword } from 'src/utils/password.utils';
+import { logger } from '../helper/logger';
+import { comparePassword, hashPassword } from '../utils/password.utils';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
-} from 'src/utils/jwt_session.utils';
+} from '../utils/jwt_session.utils';
 import {
   validateLoginInput,
   validateRegisterInput,
-} from 'src/middleware/auth-validation.middleware';
-import type { SessionMetadata } from 'src/utils/agent.utils';
+} from '../middleware/auth-validation.middleware';
+import type { SessionMetadata } from '../utils/agent.utils';
 
 @Injectable()
 export class AuthService {

@@ -10,7 +10,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import {
   verifyAdminRole,
   verifyAuthenticatedUser,
-} from 'src/middleware/role-authorization.middleware';
+} from '../middleware/role-authorization.middleware';
 
 @Resolver()
 export class DashboardResolver {

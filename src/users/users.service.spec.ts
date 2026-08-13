@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { IdSequenceService } from '../prisma/id-sequence.service';
 import { UsersService } from './users.service';
 
-jest.mock('src/utils/password.utils', () => ({
+jest.mock('../utils/password.utils', () => ({
   hashPassword: jest.fn().mockResolvedValue('hashed-password'),
 }));
 

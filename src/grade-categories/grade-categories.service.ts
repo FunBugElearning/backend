@@ -7,7 +7,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IdSequenceService } from 'src/prisma/id-sequence.service';
 import { CreateGradeCategoryInput } from './dto/create-grade-category.input';
-import { escapeRegExp, firstBatchOf } from 'src/utils/mongo-search.utils';
+import { escapeRegExp, firstBatchOf } from '../utils/mongo-search.utils';
 
 interface ClassGradeCategoryDuplicateMatch {
   _id: number;
