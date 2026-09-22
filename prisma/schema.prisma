@@ -34,6 +34,14 @@ enum AssignmentStatus {
   closed
 }
 
+enum AssignmentType {
+  // Free-text/file submission, graded manually by a teacher.
+  standard
+  // Multiple-choice submission, graded automatically on submit. Has a
+  // linked Quiz.
+  quiz
+}
+
 enum NotificationType {
   enrollment
   assignment_published
@@ -72,6 +80,10 @@ model User {
   submissions               Submission[]        @relation("StudentSubmissions")
   gradesGiven               Grade[]             @relation("GradesGiven")
   notifications             Notification[]      @relation("UserNotifications")
+  sectionsCreated           Section[]           @relation("SectionCreator")
+  lessonsCreated            Lesson[]            @relation("LessonCreator")
+  quizzesCreated            Quiz[]              @relation("QuizCreator")
+  quizAttempts              QuizAttempt[]        @relation("StudentQuizAttempts")
 
   role Role @relation(fields: [role_id], references: [id])
 
@@ -142,6 +154,7 @@ model Class {
   assignments        Assignment[]
   attendanceSessions AttendanceSession[]
   gradeCategories    ClassGradeCategory[]
+  sections           Section[]
   createdBy          User?                @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([createdById])
@@ -167,6 +180,10 @@ model Assignment {
   // caller explicitly asks to publish. See .claude/DECISIONS.md.
   status        AssignmentStatus @default(published)
   allowResubmit Boolean          @default(true)
+  // Existing rows predate this field and read as null, which the service
+  // layer treats the same as 'standard' - only newly created assignments
+  // can be type 'quiz'.
+  type          AssignmentType?  @default(standard)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -174,6 +191,7 @@ model Assignment {
   category    ClassGradeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   createdBy   User?               @relation("AssignmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
   submissions Submission[]
+  quiz        Quiz?
 
   @@index([classId])
   @@index([categoryId])
@@ -243,9 +261,10 @@ model Submission {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    User       @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
-  grade      Grade?
+  assignment  Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student     User         @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+  grade       Grade?
+  quizAttempt QuizAttempt?
 
   @@unique([assignmentId, studentId])
   @@index([assignmentId])
@@ -287,4 +306,111 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+model Section {
+  id          Int      @id @map("_id")
+  classId     Int
+  name        String
+  description String?
+  order       Int      @default(0)
+  createdById Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("SectionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  lessons   Lesson[]
+
+  @@index([classId])
+  @@map("sections")
+}
+
+model Lesson {
+  id          Int      @id @map("_id")
+  sectionId   Int
+  title       String
+  content     String?
+  order       Int      @default(0)
+  createdById Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("LessonCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([sectionId])
+  @@map("lessons")
+}
+
+// Auto-gradable multiple-choice quiz, 1:1 with an Assignment of
+// type=quiz. A student's attempt creates a normal Submission (so it slots
+// into the existing submission/grade/notification pipeline) plus this
+// QuizAttempt row holding their answers and the auto-computed score.
+model Quiz {
+  id           Int      @id @map("_id")
+  assignmentId Int      @unique
+  createdById  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignment Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  createdBy  User?          @relation("QuizCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  questions  QuizQuestion[]
+  attempts   QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id     Int      @id @map("_id")
+  quizId Int
+  prompt String
+  order  Int      @default(0)
+  points Float    @default(1)
+
+  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         Int     @id @map("_id")
+  questionId Int
+  text       String
+  // Never exposed to students via GraphQL before they submit - see
+  // QuizForAttempt/QuizQuestionForAttempt/QuizOptionForAttempt, the
+  // separate answer-key-free types the student-facing `quizToTake` query
+  // returns.
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("quiz_options")
+}
+
+model QuizAttempt {
+  id           Int      @id @map("_id")
+  quizId       Int
+  studentId    Int
+  submissionId Int      @unique
+  // { [questionId: string]: optionId } - simple enough not to need its own
+  // per-answer model/table.
+  answers      Json
+  score        Float
+  maxScore     Float
+  submittedAt  DateTime @default(now())
+
+  quiz       Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student    User       @relation("StudentQuizAttempts", fields: [studentId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, studentId])
+  @@index([quizId])
+  @@index([studentId])
+  @@map("quiz_attempts")
 }

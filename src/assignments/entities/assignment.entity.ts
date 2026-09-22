@@ -5,13 +5,17 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql';
-import { AssignmentStatus } from '@prisma/client';
+import { AssignmentStatus, AssignmentType } from '@prisma/client';
 import { Class } from 'src/classes/entities/class.entity';
 import { User } from 'src/users/entities/user.entity';
 import { ClassGradeCategory } from 'src/grade-categories/entities/class-grade-category.entity';
 
 registerEnumType(AssignmentStatus, {
   name: 'AssignmentStatus',
+});
+
+registerEnumType(AssignmentType, {
+  name: 'AssignmentType',
 });
 
 @ObjectType()
@@ -74,6 +78,13 @@ export class Assignment {
     description: 'Whether a student may resubmit after their first submission',
   })
   allowResubmit: boolean;
+
+  @Field(() => AssignmentType, {
+    nullable: true,
+    description:
+      'standard: manually graded. quiz: auto-graded multiple choice, see the Quiz linked to this assignment.',
+  })
+  type?: AssignmentType;
 
   @Field(() => Int, {
     nullable: true,

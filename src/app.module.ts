@@ -18,6 +18,9 @@ import { GradesModule } from './grades/grades.module';
 import { GradebookModule } from './gradebook/gradebook.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { SectionsModule } from './sections/sections.module';
+import { LessonsModule } from './lessons/lessons.module';
+import { QuizzesModule } from './quizzes/quizzes.module';
 
 @Module({
   imports: [
@@ -41,6 +44,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
     GradebookModule,
     NotificationsModule,
     DashboardModule,
+    SectionsModule,
+    LessonsModule,
+    QuizzesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

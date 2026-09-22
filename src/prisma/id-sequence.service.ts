@@ -19,6 +19,12 @@ const SEQUENCE_MODELS = [
   'Submission',
   'Grade',
   'Notification',
+  'Section',
+  'Lesson',
+  'Quiz',
+  'QuizQuestion',
+  'QuizOption',
+  'QuizAttempt',
 ] as const;
 
 export type SequenceModel = (typeof SEQUENCE_MODELS)[number];

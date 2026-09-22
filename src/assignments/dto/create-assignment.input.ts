@@ -11,7 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AssignmentStatus } from '@prisma/client';
+import { AssignmentStatus, AssignmentType } from '@prisma/client';
 
 @InputType()
 export class CreateAssignmentInput {
@@ -84,4 +84,15 @@ export class CreateAssignmentInput {
   @IsOptional()
   @IsBoolean()
   allowResubmit?: boolean;
+
+  // 'standard' (default): free-text/file submission, graded manually.
+  // 'quiz': after creating, call createQuiz to add its questions - students
+  // then answer via submitQuizAttempt and it's scored automatically.
+  @Field(() => AssignmentType, {
+    nullable: true,
+    defaultValue: 'standard',
+  })
+  @IsOptional()
+  @IsEnum(AssignmentType)
+  type?: AssignmentType;
 }

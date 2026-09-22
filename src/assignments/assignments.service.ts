@@ -108,6 +108,7 @@ export class AssignmentsService {
         createdById,
         status,
         allowResubmit: createAssignmentInput.allowResubmit ?? true,
+        type: createAssignmentInput.type ?? 'standard',
       },
       include: {
         class: true,
