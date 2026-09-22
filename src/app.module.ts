@@ -21,6 +21,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { SectionsModule } from './sections/sections.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { QuizzesModule } from './quizzes/quizzes.module';
     SectionsModule,
     LessonsModule,
     QuizzesModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

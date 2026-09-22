@@ -1,10 +1,15 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { json } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Default Express json body limit (100kb) is too small for the
+  // uploadImage mutation's base64-encoded image payloads.
+  app.use(json({ limit: '10mb' }));
 
   const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
     .split(',')
