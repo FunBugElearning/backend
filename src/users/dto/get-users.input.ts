@@ -1,8 +1,8 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 @InputType()
-export class GetClassesInput {
+export class GetUsersInput {
   @Field(() => Int, {
     nullable: true,
     defaultValue: 1,
@@ -23,17 +23,25 @@ export class GetClassesInput {
 
   @Field(() => String, {
     nullable: true,
-    description: 'Case-insensitive partial match against the class name',
+    description: 'Case-insensitive partial match against name or email',
   })
   @IsOptional()
   @IsString()
   search?: string;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'Filter to a single role, e.g. "student" or "teacher"',
+  })
+  @IsOptional()
+  @IsIn(['admin', 'teacher', 'student'])
+  roleName?: string;
+
   @Field(() => Int, {
     nullable: true,
-    description: 'Only classes this teacher is assigned to',
+    description: 'Only users enrolled in / assigned to this class',
   })
   @IsOptional()
   @IsInt()
-  teacherId?: number;
+  classId?: number;
 }

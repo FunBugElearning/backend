@@ -225,7 +225,12 @@ export class ClassesResolver {
       throw new UnauthorizedException(validation.message);
     }
 
-    return this.classesService.findAll(input?.page, input?.limit);
+    return this.classesService.findAll(
+      input?.page,
+      input?.limit,
+      input?.search,
+      input?.teacherId,
+    );
   }
 
   /**
@@ -247,7 +252,13 @@ export class ClassesResolver {
   }
 
   /**
-   * Lấy chi tiết class. Yêu cầu đăng nhập.
+   * Lấy chi tiết class (bao gồm teachers/students embedded).
+   * Admin xem được mọi class. Teacher/Student phải thuộc class.
+   * Dùng chung logic với assertCanViewClassMembers vì Class.teachers/
+   * Class.students được trả về ngay trong query này (không phải qua
+   * teachersByClassId/studentsByClassId riêng) - trước đây field này
+   * không có ownership check nên bất kỳ teacher nào cũng đọc được roster
+   * của class người khác.
    */
   @Query(() => Class, {
     name: 'class',
@@ -259,13 +270,15 @@ export class ClassesResolver {
     id: number,
     @Context('req') req: Request,
   ) {
-    const validation = await verifyAuthenticatedUser(req, this.prisma);
+    await this.assertCanViewClassMembers(req, id);
 
-    if (!validation.ok) {
-      throw new UnauthorizedException(validation.message);
+    const classItem = await this.classesService.findOne(id);
+
+    if (!classItem) {
+      throw new NotFoundException('Class is not found');
     }
 
-    return this.classesService.findOne(id);
+    return classItem;
   }
 
   /**

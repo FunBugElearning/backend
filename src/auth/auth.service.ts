@@ -50,20 +50,21 @@ export class AuthService {
         },
       });
 
+      // Deliberately generic: distinguishing "no such email" from "wrong
+      // password" lets a caller enumerate valid account emails.
+      const invalidCredentialsResult = {
+        success: false,
+        message: 'Invalid email or password',
+      };
+
       if (!user) {
-        return {
-          success: false,
-          message: 'Invalid email',
-        };
+        return invalidCredentialsResult;
       }
 
       const isPasswordValid = await comparePassword(password, user.password);
 
       if (!isPasswordValid) {
-        return {
-          success: false,
-          message: 'Invalid password',
-        };
+        return invalidCredentialsResult;
       }
 
       const jti = randomUUID();

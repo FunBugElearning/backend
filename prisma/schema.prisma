@@ -125,6 +125,11 @@ model AuthAuditLog {
 model Class {
   id          Int      @id @map("_id")
   name        String
+  // Lowercased shadow copy of name, kept in sync on create/update - same
+  // pattern as User.nameLower/emailLower, needed because Prisma's MongoDB
+  // connector has no `mode: 'insensitive'` filter for case-insensitive
+  // search (ClassesService.findAll).
+  nameLower   String?
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -140,6 +145,7 @@ model Class {
   createdBy          User?                @relation("ClassCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([createdById])
+  @@index([nameLower])
   @@index([teacherIds])
   @@index([studentIds])
 }

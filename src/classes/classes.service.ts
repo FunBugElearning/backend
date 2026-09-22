@@ -27,6 +27,7 @@ export class ClassesService {
       data: {
         id: await this.idSequence.next('Class'),
         name,
+        nameLower: name.toLowerCase(),
         description,
         createdById,
         teachers: {
@@ -44,9 +45,26 @@ export class ClassesService {
     });
   }
 
-  async findAll(page = 1, limit = 10) {
+  async findAll(page = 1, limit = 10, search?: string, teacherId?: number) {
+    const trimmedSearch = search?.trim();
+
+    const where: Prisma.ClassWhereInput = {
+      ...(trimmedSearch && {
+        // Old documents predating the nameLower shadow field are null there
+        // and fall back to the case-sensitive `name` condition below.
+        OR: [
+          { name: { contains: trimmedSearch } },
+          { nameLower: { contains: trimmedSearch.toLowerCase() } },
+        ],
+      }),
+      ...(teacherId !== undefined && {
+        teacherIds: { has: teacherId },
+      }),
+    };
+
     const [items, total] = await this.prisma.$transaction([
       this.prisma.class.findMany({
+        where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: {
@@ -58,7 +76,7 @@ export class ClassesService {
           createdBy: true,
         },
       }),
-      this.prisma.class.count(),
+      this.prisma.class.count({ where }),
     ]);
 
     return {
@@ -134,6 +152,7 @@ export class ClassesService {
       data: {
         ...(name !== undefined && {
           name,
+          nameLower: name.toLowerCase(),
         }),
 
         ...(description !== undefined && {

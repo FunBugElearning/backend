@@ -3,8 +3,10 @@ import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
+import { UserPagination } from './entities/user-pagination.entity';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
+import { GetUsersInput } from './dto/get-users.input';
 import { PrismaService } from '../prisma/prisma.service';
 import { verifyAdminRole } from '../middleware/role-authorization.middleware';
 
@@ -60,6 +62,19 @@ export class UsersResolver {
   async findAll(@Context('req') req: Request) {
     await this.assertAdmin(req);
     return this.usersService.findAll();
+  }
+
+  /**
+   * Paginated, searchable, filterable user listing for the admin
+   * Students/Teachers screens. Admin-only.
+   */
+  @Query(() => UserPagination, { name: 'paginatedUsers' })
+  async findAllPaginated(
+    @Context('req') req: Request,
+    @Args('input', { nullable: true }) input?: GetUsersInput,
+  ) {
+    await this.assertAdmin(req);
+    return this.usersService.findAllPaginated(input ?? {});
   }
 
   @Query(() => User, { name: 'user' })

@@ -3,6 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { IdSequenceService } from '../prisma/id-sequence.service';
 import { AuthService } from './auth.service';
 import type { RegisterAuthInput } from './dto/register-auth.input';
+import { comparePassword } from '../utils/password.utils';
+
+jest.mock('../utils/password.utils', () => ({
+  hashPassword: jest.fn().mockResolvedValue('hashed-password'),
+  comparePassword: jest.fn(),
+}));
+
+const mockedComparePassword = comparePassword as jest.Mock;
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -94,6 +102,59 @@ describe('AuthService', () => {
       expect(prisma.role.findUnique).not.toHaveBeenCalledWith({
         where: { name: 'admin' },
       });
+    });
+  });
+
+  describe('login', () => {
+    const credentials = { email: 'user@example.com', password: 'password123' };
+    const sessionMetadata = { browser_agent: 'jest', ip_address: '127.0.0.1' };
+
+    it('BUG-005 regression: returns the same generic message for an unknown email as for a wrong password', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      const unknownEmailResult = await service.login(
+        credentials,
+        sessionMetadata,
+      );
+
+      prisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        password: 'hashed-password',
+        role: { id: 3, name: 'student' },
+      });
+      mockedComparePassword.mockResolvedValue(false);
+
+      const wrongPasswordResult = await service.login(
+        credentials,
+        sessionMetadata,
+      );
+
+      expect(unknownEmailResult).toEqual({
+        success: false,
+        message: 'Invalid email or password',
+      });
+      expect(wrongPasswordResult).toEqual({
+        success: false,
+        message: 'Invalid email or password',
+      });
+      // Same message either way - neither leaks which field was wrong.
+      expect(unknownEmailResult.message).toBe(wrongPasswordResult.message);
+    });
+
+    it('succeeds with a valid email and password', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 1,
+        name: 'User',
+        email: credentials.email,
+        password: 'hashed-password',
+        role: { id: 3, name: 'student' },
+      });
+      mockedComparePassword.mockResolvedValue(true);
+      prisma.authSession.create.mockResolvedValue({});
+
+      const result = await service.login(credentials, sessionMetadata);
+
+      expect(result.success).toBe(true);
     });
   });
 });
