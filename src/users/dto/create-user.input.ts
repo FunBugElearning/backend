@@ -28,11 +28,11 @@ export class CreateUserInput {
   @Field({ description: 'User date of birth' })
   dateOfBirth: Date;
 
-  @Field({ description: 'User address' })
+  @Field({ nullable: true, description: 'User address' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  address: string;
+  address?: string;
 
   @Field({ nullable: true, description: 'User phonenumber' })
   @IsOptional()
