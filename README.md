@@ -312,8 +312,8 @@ are separate repositories/deployments:
    this backend (`http://localhost:8080/graphql` locally), and run it per
    that repo's own README.
 3. Seed data (`pnpm exec prisma db seed`) creates demo accounts you can log
-   into from the frontend - see that repo's README for the actual
-   credentials, since they're account details rather than backend config.
+   into from the frontend - see `prisma/seed.ts` in this repo for the actual
+   credentials, since they're account details rather than frontend config.
 
 In production the two are already wired together: the deployed frontend's
 `NEXT_PUBLIC_GRAPHQL_URL` points at this backend's `/graphql`, and this
