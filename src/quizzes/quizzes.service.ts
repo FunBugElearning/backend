@@ -308,6 +308,20 @@ export class QuizzesService {
       );
     }
 
+    // Grade.score is interpreted everywhere else in the app (manual grading,
+    // the "X/{assignment.maxScore}" displays, gradeSubmission's own
+    // maxScore validation) as "out of assignment.maxScore" - the quiz's own
+    // raw point total (maxScore, e.g. 2 for two 1-point questions) is a
+    // separate, independent number the teacher never sees or sets against
+    // the assignment's maxScore (e.g. 100). Storing the raw quiz score
+    // directly in Grade.score would silently misrepresent a 50%-correct
+    // quiz as "1/100" instead of "50/100". QuizAttempt keeps the raw
+    // score/maxScore (useful on its own - "you got 1 of 2 questions
+    // right"); Grade.score is the same result scaled onto the assignment's
+    // actual max.
+    const gradeScore =
+      maxScore > 0 ? (score / maxScore) * assignment.maxScore : 0;
+
     const submissionId = await this.idSequence.next('Submission');
     const attemptId = await this.idSequence.next('QuizAttempt');
     const gradeId = await this.idSequence.next('Grade');
@@ -345,7 +359,7 @@ export class QuizzesService {
         data: {
           id: gradeId,
           submissionId,
-          score,
+          score: gradeScore,
           feedback: 'Auto-graded quiz',
           gradedById,
         },

@@ -119,6 +119,7 @@ describe('QuizzesService', () => {
         classId: 3,
         status: 'published',
         type: 'quiz',
+        maxScore: 100,
         createdById: 99,
         class: {
           id: 3,
@@ -180,17 +181,46 @@ describe('QuizzesService', () => {
         5,
       );
 
+      // Raw quiz score is 2/5 (Q1 worth 2pts correct, Q2 worth 3pts wrong).
+      // Grade.score must be that ratio scaled onto the assignment's own
+      // maxScore (100), i.e. 40 - not the raw "2" - since every other grade
+      // in the app is interpreted as "out of assignment.maxScore".
       const gradeCreateCalls = prisma.grade.create.mock.calls as [
         { data: { score: number; gradedById: number } },
       ][];
-      expect(gradeCreateCalls[0][0].data.score).toBe(2);
+      expect(gradeCreateCalls[0][0].data.score).toBe(40);
       expect(gradeCreateCalls[0][0].data.gradedById).toBe(99);
 
+      // QuizAttempt keeps the raw, unscaled quiz score/maxScore.
       const attemptCreateCalls = prisma.quizAttempt.create.mock.calls as [
         { data: { score: number; maxScore: number } },
       ][];
       expect(attemptCreateCalls[0][0].data.score).toBe(2);
       expect(attemptCreateCalls[0][0].data.maxScore).toBe(5);
+    });
+
+    it('scales the grade onto assignment.maxScore when it differs from the quiz raw point total', async () => {
+      // Assignment maxScore 100, quiz raw total 5, all 5 raw points earned
+      // -> full marks, Grade.score must be 100, not 5.
+      prisma.assignment.findUnique.mockResolvedValue(
+        baseAssignment({ maxScore: 100 }),
+      );
+
+      await service.submitAttempt(
+        {
+          assignmentId: 10,
+          answers: [
+            { questionId: 101, optionId: 1001 }, // correct, +2
+            { questionId: 102, optionId: 1004 }, // correct, +3
+          ],
+        },
+        5,
+      );
+
+      const gradeCreateCalls = prisma.grade.create.mock.calls as [
+        { data: { score: number } },
+      ][];
+      expect(gradeCreateCalls[0][0].data.score).toBe(100);
     });
 
     it('scores an unanswered question as 0 without erroring', async () => {
